@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>國外代購費用計算器 - 專業紀錄版</title>
+    <meta name="description" content="精準計算代購匯率、多國動態退稅、紀錄購買人資訊，一鍵存檔報價紀錄">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0d0f1a; --bg-card: #151828; --bg-section: #1c2035; --bg-input: #222640;
+            --accent: #6c63ff; --accent2: #a78bfa; --gold: #f5c842; --gold2: #fde68a;
+            --green: #34d399; --red: #f87171; --text-main: #e8eaf6; --text-sub: #9ba3c8;
+            --text-muted: #5c6290; --border: #2e3353; --radius: 14px; --radius-sm: 8px;
+            --shadow: 0 8px 32px rgba(0,0,0,.4); --glow: 0 0 20px rgba(108,99,255,.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Noto Sans TC', 'Inter', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background: radial-gradient(ellipse 60% 40% at 20% 20%, rgba(108,99,255,.12) 0%, transparent 70%),
+                        radial-gradient(ellipse 50% 50% at 80% 80%, rgba(167,139,250,.08) 0%, transparent 70%);
+            pointer-events: none; z-index: 0;
+        }
+
+        .wrapper { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+        
+        header { text-align: center; padding: 40px 0 24px; }
+        .header-badge {
+            display: inline-block; background: linear-gradient(135deg, rgba(108,99,255,0.25), rgba(167,139,250,0.15));
+            border: 1px solid rgba(108,99,255,0.4); color: var(--accent2); font-size: 0.75rem;
+            font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+            padding: 5px 16px; border-radius: 99px; margin-bottom: 12px;
+        }
+        header h1 {
+            font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 700;
+            background: linear-gradient(135deg, #fff 30%, var(--accent2) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+
+        /* Tabs Navigation */
+        .nav-tabs {
+            display: flex; justify-content: center; gap: 10px; margin-bottom: 30px;
+            background: var(--bg-card); padding: 6px; border-radius: 99px; border: 1px solid var(--border);
+        }
+        .nav-tab {
+            padding: 10px 24px; border-radius: 99px; border: none; background: transparent;
+            color: var(--text-sub); cursor: pointer; font-weight: 600; transition: all 0.3s;
+        }
+        .nav-tab.active { background: var(--accent); color: #fff; box-shadow: var(--glow); }
+
+        .view { display: none; animation: fadeIn 0.4s ease; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+            box-shadow: var(--shadow); transition: border-color 0.3s;
+        }
+        .card:hover { border-color: rgba(108,99,255,0.4); }
+        .card-title { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 600; margin-bottom: 20px; }
+        
+        .icon {
+            width: 32px; height: 32px; border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+        }
+        .icon-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .icon-purple { background: rgba(108,99,255,0.2); color: var(--accent2); }
+        .icon-green { background: rgba(52,211,153,0.15); color: var(--green); }
+        .icon-gold { background: rgba(245,200,66,0.15); color: var(--gold); }
+
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 0.8rem; font-weight: 500; color: var(--text-sub); }
+        label span.req { color: var(--red); margin-left: 4px; }
+
+        input, select {
+            background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            color: var(--text-main); font-size: 0.95rem; padding: 12px 14px; outline: none; width: 100%;
+            transition: all 0.2s;
+        }
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,0.2); }
+
+        .toggle-group { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-input); }
+        .toggle-btn {
+            flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-sub);
+            cursor: pointer; font-size: 0.88rem; transition: all 0.2s;
+        }
+        .toggle-btn.active { background: var(--accent); color: #fff; }
+
+        .info-box {
+            background: rgba(108,99,255,0.08); border: 1px solid rgba(108,99,255,0.25);
+            border-radius: var(--radius-sm); padding: 12px 16px; font-size: 0.82rem;
+            color: var(--text-sub); margin-top: 12px;
+        }
+
+        .calc-btn {
+            width: 100%; padding: 16px; border: none; border-radius: var(--radius);
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: #fff; font-size: 1.1rem; font-weight: 600; cursor: pointer;
+            box-shadow: var(--glow); transition: all 0.2s; margin-top: 10px;
+        }
+        .save-btn {
+            width: 100%; padding: 12px; border: 1px solid var(--accent); border-radius: var(--radius);
+            background: transparent; color: var(--accent2); font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; margin-top: 12px;
+        }
+        .save-btn:hover { background: rgba(108,99,255,0.1); }
+
+        #result-panel { display: none; animation: fadeUp 0.5s ease; margin-top: 30px; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .result-item { background: var(--bg-section); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; text-align: center; }
+        .result-item .label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+        .result-item .value { font-size: 1.1rem; font-weight: 700; }
+        .accent { color: var(--accent2); } .gold { color: var(--gold); } .green { color: var(--green); } .red { color: var(--red); }
+
+        .final-charge {
+            background: linear-gradient(135deg, rgba(108,99,255,0.15), rgba(167,139,250,0.1));
+            border: 1px solid rgba(108,99,255,0.4); border-radius: var(--radius);
+            padding: 30px; text-align: center; margin-bottom: 20px;
+        }
+        .final-charge .amount { font-size: 2.8rem; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        .final-charge .formula { font-size: 0.85rem; color: var(--text-sub); }
+
+        /* History View */
+        .history-list { display: flex; flex-direction: column; gap: 15px; }
+        .history-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 20px; position: relative; transition: transform 0.2s;
+        }
+        .history-card:hover { transform: scale(1.01); }
+        .history-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .history-user { font-weight: 700; color: var(--accent2); font-size: 1.1rem; }
+        .history-date { font-size: 0.75rem; color: var(--text-muted); }
+        .history-item-name { color: var(--text-main); font-size: 0.9rem; margin-bottom: 8px; }
+        .history-total { font-size: 1.3rem; font-weight: 800; color: #fff; }
+        .history-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-sm { padding: 6px 12px; font-size: 0.75rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-sub); }
+        .btn-sm.delete:hover { background: rgba(248,113,113,0.2); color: var(--red); border-color: var(--red); }
+
+        .check-row { display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 12px 0; }
+        .custom-check {
+            width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 4px;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        input[type="checkbox"] { display: none; }
+        input[type="checkbox"]:checked + .custom-check { background: var(--accent); border-color: var(--accent); }
+        input[type="checkbox"]:checked + .custom-check::after { content: '✓'; color: #fff; font-size: 12px; }
+
+        .collapsible { max-height: 0; opacity: 0; overflow: hidden; transition: all 0.4s ease; }
+        .collapsible.open { max-height: 1000px; opacity: 1; margin-top: 16px; }
+
+        .msg-box {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 99px; background: var(--bg-card);
+            border: 1px solid var(--accent); box-shadow: var(--shadow); z-index: 1000;
+            display: none; animation: slideDown 0.3s ease; color: #fff;
+        }
+        @keyframes slideDown { from { top: -50px; } to { top: 20px; } }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+
+        @media (max-width: 600px) {
+            .wrapper { padding: 0 15px 40px; }
+            .card { padding: 20px; }
+            header { padding: 24px 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="toast" class="msg-box"></div>
+
+<div class="wrapper">
+    <header>
+        <div class="header-badge">Agent Pro</div>
+        <h1>代購報價與紀錄系統</h1>
+    </header>
+
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchView('calc')">🧮 費用計算</button>
+        <button class="nav-tab" onclick="switchView('history')">📜 歷史紀錄</button>
+    </div>
+
+    <!-- View: Calculator -->
+    <div id="view-calc" class="view active">
+        <!-- 委託資訊 -->
+        <div class="card">
+            <div class="card-title"><div class="icon icon-blue">👤</div>委託資訊</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>購買人姓名 / 綽號</label>
+                    <input type="text" id="buyer-name" placeholder="例如：林小姐">
+                </div>
+                <div class="form-group">
+                    <label>購買品項內容</label>
+                    <input type="text" id="item-description" placeholder="例如：Dior 錢包、日本藥妝一批">
+                </div>
+            </div>
+        </div>
+
+        <!-- ① 匯率設定 -->
+        <div class="card">
+            <div class="card-title"><div class="icon icon-purple">💱</div>① 匯率與付款方式</div>
+            <div class="form-group" style="margin-bottom:18px">
+                <label>付款方式</label>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="btn-card" onclick="setPayment('card')">💳 信用卡刷卡</button>
+                    <button class="toggle-btn" id="btn-cash" onclick="setPayment('cash')">💵 現金付款</button>
+                </div>
+            </div>
+
+            <div id="mode-card" class="collapsible open">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>外幣收據金額<span class="req">*</span></label>
+                        <input type="number" id="foreign-amount" placeholder="0" oninput="autoCalcRate()">
+                    </div>
+                    <div class="form-group">
+                        <label>幣別</label>
+                        <select id="currency-card" onchange="autoCalcRate()">
+                            <option value="JPY">日圓 JPY</option>
+                            <option value="KRW">韓元 KRW</option>
+                            <option value="USD">美元 USD</option>
+                            <option value="EUR">歐元 EUR</option>
+                            <option value="THB">泰銖 THB</option>
+                            <option value="HKD">港幣 HKD</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>銀行台幣扣款<span class="req">*</span></label>
+                        <input type="number" id="twd-charged" placeholder="0" oninput="autoCalcRate()">
+                    </div>
+                </div>
+                <div id="auto-rate-box" class="info-box" style="display:none">
+                    🔍 <b>實質匯率：</b><span id="auto-rate-text"></span>
+                </div>
+            </div>
+
+            <div id="mode-cash" class="collapsible">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>現金外幣金額<span class="req">*</span></label>
+                        <input type="number" id="cash-foreign" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>換匯匯率</label>
+                        <input type="number" id="cash-rate" placeholder="如：0.215" step="0.0001">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ② 國家與退稅 -->
+        <div class="card">
+            <div class="card-title"><div class="icon icon-green">🌍</div>② 國家與退稅設定</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>購買國家</label>
+                    <select id="country-select" onchange="onCountryChange()">
+                        <option value="">-- 請選擇國家 --</option>
+                        <option value="JP">🇯🇵 日本 (Japan)</option>
+                        <option value="KR">🇰🇷 韓國 (Korea)</option>
+                        <option value="EU">🇪🇺 歐盟 (EU - 法德義)</option>
+                        <option value="TH">🇹🇭 泰國 (Thailand)</option>
+                    </select>
+                </div>
+                <div id="category-group" class="form-group" style="display:none">
+                    <label>商品類別</label>
+                    <select id="item-category" onchange="onCategoryChange()">
+                        <!-- 動態生成 -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>官方退稅率 (%)</label>
+                    <input type="number" id="official-tax-rate" placeholder="0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>店家額外折扣 (%)</label>
+                    <input type="number" id="store-discount-rate" placeholder="0" step="0.1">
+                </div>
+            </div>
+
+            <label class="check-row">
+                <input type="checkbox" id="enable-tax-refund" onchange="toggleTaxSection()">
+                <span class="custom-check"></span>
+                <span class="check-label">確認有退稅需求</span>
+            </label>
+
+            <div id="tax-section" class="collapsible">
+                <div class="form-group">
+                    <label>退稅類型</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="btn-posttax" onclick="setTaxBase('posttax')">稅後退還 (先付含稅價)</button>
+                        <button class="toggle-btn" id="btn-pretax" onclick="setTaxBase('pretax')">稅前免稅 (現場直接免稅)</button>
+                    </div>
+                    <div id="tax-hint" class="info-box">
+                        💡 <b>稅後退還：</b>您支付了含稅價，之後會領回現金或刷退（應從應收中扣除）。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ③ 服務費與運費 -->
+        <div class="card">
+            <div class="card-title"><div class="icon icon-gold">📦</div>③ 其他費用</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>代購服務費 (台幣)</label>
+                    <input type="number" id="service-fee" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>國內/國際運費 (台幣)</label>
+                    <input type="number" id="shipping-fee" placeholder="0">
+                </div>
+            </div>
+        </div>
+
+        <button class="calc-btn" onclick="calculate()">🧮 計算應收總額</button>
+
+        <div id="result-panel">
+            <div class="card">
+                <div class="result-grid" id="summary-grid"></div>
+                <div class="final-charge">
+                    <div class="amount" id="res-total">NT$ 0</div>
+                    <div class="formula" id="res-formula"></div>
+                </div>
+                <button class="save-btn" onclick="saveRecord()">💾 儲存此筆報價到紀錄</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View: History -->
+    <div id="view-history" class="view">
+        <div id="history-container" class="history-list">
+            <!-- 歷史紀錄將在這裡動態生成 -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // 國家與類別稅率資料庫
+    const COUNTRY_RULES = {
+        JP: {
+            categories: [
+                { name: '一般商品 (精品/電器)', rate: 10, type: 'pretax' },
+                { name: '消耗品 (藥妝/食品)', rate: 8, type: 'pretax' }
+            ]
+        },
+        KR: {
+            categories: [
+                { name: '一般商品', rate: 10, type: 'posttax' }
+            ]
+        },
+        EU: {
+            categories: [
+                { name: '標準商品 (精品)', rate: 20, type: 'posttax' },
+                { name: '書籍/食品', rate: 7, type: 'posttax' }
+            ]
+        },
+        TH: {
+            categories: [
+                { name: '一般商品', rate: 7, type: 'posttax' }
+            ]
+        }
+    };
+
+    let paymentMode = 'card';
+    let taxBase = 'posttax';
+    let lastCalculation = null;
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 3000);
+    }
+
+    function switchView(view) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        
+        document.getElementById(`view-${view}`).classList.add('active');
+        const activeTab = Array.from(document.querySelectorAll('.nav-tab')).find(t => t.textContent.includes(view === 'calc' ? '計算' : '歷史'));
+        if(activeTab) activeTab.classList.add('active');
+
+        if(view === 'history') loadHistory();
+    }
+
+    function setPayment(mode) {
+        paymentMode = mode;
+        document.getElementById('btn-card').classList.toggle('active', mode === 'card');
+        document.getElementById('btn-cash').classList.toggle('active', mode === 'cash');
+        document.getElementById('mode-card').classList.toggle('open', mode === 'card');
+        document.getElementById('mode-cash').classList.toggle('open', mode === 'cash');
+    }
+
+    function toggleTaxSection() {
+        const checked = document.getElementById('enable-tax-refund').checked;
+        document.getElementById('tax-section').classList.toggle('open', checked);
+    }
+
+    function setTaxBase(base) {
+        taxBase = base;
+        document.getElementById('btn-pretax').classList.toggle('active', base === 'pretax');
+        document.getElementById('btn-posttax').classList.toggle('active', base === 'posttax');
+        document.getElementById('tax-hint').innerHTML = base === 'pretax' 
+            ? '💡 <b>稅前免稅：</b>現場直接免稅。報價不會再額外扣除（因為基準價已是低價）。'
+            : '💡 <b>稅後退還：</b>您支付了含稅價。之後領回的退稅款會從報價中扣除。';
+    }
+
+    function onCountryChange() {
+        const code = document.getElementById('country-select').value;
+        const catGroup = document.getElementById('category-group');
+        const catSelect = document.getElementById('item-category');
+        
+        if (COUNTRY_RULES[code]) {
+            catGroup.style.display = 'flex';
+            catSelect.innerHTML = COUNTRY_RULES[code].categories.map((c, i) => 
+                `<option value="${i}">${c.name}</option>`
+            ).join('');
+            onCategoryChange();
+        } else {
+            catGroup.style.display = 'none';
+        }
+    }
+
+    function onCategoryChange() {
+        const code = document.getElementById('country-select').value;
+        const catIdx = document.getElementById('item-category').value;
+        const rule = COUNTRY_RULES[code].categories[catIdx];
+        
+        document.getElementById('official-tax-rate').value = rule.rate;
+        setTaxBase(rule.type);
+    }
+
+    function autoCalcRate() {
+        const f = parseFloat(document.getElementById('foreign-amount').value);
+        const t = parseFloat(document.getElementById('twd-charged').value);
+        const box = document.getElementById('auto-rate-box');
+        if (f > 0 && t > 0) {
+            const rate = t / f;
+            document.getElementById('auto-rate-text').textContent = `1 外幣 = ${rate.toFixed(4)} TWD`;
+            box.style.display = 'block';
+        } else {
+            box.style.display = 'none';
+        }
+    }
+
+    function calculate() {
+        let fAmt = 0, rate = 0, twdBase = 0;
+        const buyer = document.getElementById('buyer-name').value || '未命名委託人';
+        const item = document.getElementById('item-description').value || '未標註品項';
+
+        if (paymentMode === 'card') {
+            fAmt = parseFloat(document.getElementById('foreign-amount').value) || 0;
+            twdBase = parseFloat(document.getElementById('twd-charged').value) || 0;
+            if (fAmt <= 0 || twdBase <= 0) return showToast('請填寫完整金額與扣款');
+            rate = twdBase / fAmt;
+        } else {
+            fAmt = parseFloat(document.getElementById('cash-foreign').value) || 0;
+            rate = parseFloat(document.getElementById('cash-rate').value) || 0;
+            if (fAmt <= 0 || rate <= 0) return showToast('請填寫完整外幣金額與換匯匯率');
+            twdBase = fAmt * rate;
+        }
+
+        const isTaxRefund = document.getElementById('enable-tax-refund').checked;
+        const taxRate = (parseFloat(document.getElementById('official-tax-rate').value) || 0) / 100;
+        const storeRate = (parseFloat(document.getElementById('store-discount-rate').value) || 0) / 100;
+        const svc = parseFloat(document.getElementById('service-fee').value) || 0;
+        const ship = parseFloat(document.getElementById('shipping-fee').value) || 0;
+
+        let refundTwd = (isTaxRefund && taxBase === 'posttax') ? twdBase * taxRate : 0;
+        const discountTwd = twdBase * storeRate;
+        const total = twdBase - refundTwd - discountTwd + svc + ship;
+
+        lastCalculation = {
+            id: Date.now(),
+            date: new Date().toLocaleString(),
+            buyer, item, fAmt, rate, twdBase, refundTwd, discountTwd, svc, ship, total,
+            currency: document.getElementById('currency-card').value
+        };
+
+        renderResult(lastCalculation);
+    }
+
+    function renderResult(d) {
+        document.getElementById('summary-grid').innerHTML = `
+            <div class="result-item"><div class="label">外幣原價</div><div class="value accent">${d.fAmt} ${d.currency}</div></div>
+            <div class="result-item"><div class="label">匯率</div><div class="value gold">${d.rate.toFixed(4)}</div></div>
+            <div class="result-item"><div class="label">台幣基準</div><div class="value">NT$ ${Math.round(d.twdBase)}</div></div>
+            ${d.refundTwd > 0 ? `<div class="result-item"><div class="label">退稅折抵</div><div class="value green">-NT$ ${Math.round(d.refundTwd)}</div></div>` : ''}
+        `;
+
+        document.getElementById('res-total').textContent = `NT$ ${Math.round(d.total).toLocaleString()}`;
+        document.getElementById('res-formula').textContent = `計算公式：基準 ${Math.round(d.twdBase)} ${d.refundTwd > 0 ? '- 退稅 '+Math.round(d.refundTwd) : ''} ${d.discountTwd > 0 ? '- 折扣 '+Math.round(d.discountTwd) : ''} + 代購費 ${d.svc} + 運費 ${d.ship}`;
+
+        const panel = document.getElementById('result-panel');
+        panel.style.display = 'block';
+        setTimeout(() => panel.scrollIntoView({ behavior: 'smooth' }), 200);
+    }
+
+    function saveRecord() {
+        if (!lastCalculation) return;
+        const history = JSON.parse(localStorage.getItem('agent_history') || '[]');
+        history.unshift(lastCalculation);
+        localStorage.setItem('agent_history', JSON.stringify(history));
+        showToast('✅ 紀錄已成功儲存');
+    }
+
+    function loadHistory() {
+        const history = JSON.parse(localStorage.getItem('agent_history') || '[]');
+        const container = document.getElementById('history-container');
+        
+        if (history.length === 0) {
+            container.innerHTML = `<div class="empty-state">目前還沒有紀錄，開始計算第一筆報價吧！</div>`;
+            return;
+        }
+
+        container.innerHTML = history.map(h => `
+            <div class="history-card">
+                <div class="history-header">
+                    <div>
+                        <div class="history-user">${h.buyer}</div>
+                        <div class="history-date">${h.date}</div>
+                    </div>
+                    <div class="history-total">NT$ ${Math.round(h.total).toLocaleString()}</div>
+                </div>
+                <div class="history-item-name">📦 品項：${h.item}</div>
+                <div style="font-size:0.8rem; color:var(--text-sub);">
+                    外幣：${h.fAmt} (${h.rate.toFixed(3)}) | 代購費：${h.svc} | 運費：${h.ship}
+                </div>
+                <div class="history-actions">
+                    <button class="btn-sm delete" onclick="deleteRecord(${h.id})">刪除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function deleteRecord(id) {
+        let history = JSON.parse(localStorage.getItem('agent_history') || '[]');
+        history = history.filter(h => h.id !== id);
+        localStorage.setItem('agent_history', JSON.stringify(history));
+        loadHistory();
+        showToast('🗑️ 紀錄已刪除');
+    }
+</script>
+</body>
+</html>
