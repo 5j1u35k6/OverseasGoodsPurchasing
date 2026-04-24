@@ -134,7 +134,10 @@
             padding: 30px; text-align: center; margin-bottom: 20px;
         }
         .final-charge .amount { font-size: 2.8rem; font-weight: 800; color: #fff; margin-bottom: 8px; }
-        .final-charge .formula { font-size: 0.85rem; color: var(--text-sub); }
+        .detail-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
+        .detail-table th { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); color: var(--text-sub); }
+        .detail-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .detail-table td:last-child { text-align: right; font-weight: 600; }
 
         /* History View */
         .history-list { display: flex; flex-direction: column; gap: 15px; }
@@ -249,6 +252,9 @@
                 <div id="auto-rate-box" class="info-box" style="display:none">
                     🔍 <b>實質匯率：</b><span id="auto-rate-text"></span>
                 </div>
+                <div class="info-box" style="border-color: var(--gold); background: rgba(245,200,66,0.05);">
+                    💡 刷卡模式將自動外加 <b>1.5%</b> 國外交易手續費
+                </div>
             </div>
 
             <div id="mode-cash" class="collapsible">
@@ -312,7 +318,7 @@
                         <button class="toggle-btn" id="btn-pretax" onclick="setTaxBase('pretax')">稅前免稅 (現場直接免稅)</button>
                     </div>
                     <div id="tax-hint" class="info-box">
-                        💡 <b>稅後退還：</b>您支付了含稅價，之後會領回現金或刷退（應從應收中扣除）。
+                        💡 <b>稅後退還：</b>您支付了含稅價。之後領回的退稅款會從報價中扣除。
                     </div>
                 </div>
             </div>
@@ -337,10 +343,22 @@
 
         <div id="result-panel">
             <div class="card">
-                <div class="result-grid" id="summary-grid"></div>
+                <div class="card-title"><div class="icon icon-purple">📊</div>費用明細表</div>
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th>項目</th>
+                            <th>說明 / 計算式</th>
+                            <th>台幣金額</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detail-list-body">
+                        <!-- 動態填充 -->
+                    </tbody>
+                </table>
                 <div class="final-charge">
+                    <div style="font-size: 0.9rem; color: var(--text-sub); margin-bottom: 5px;">應收合計</div>
                     <div class="amount" id="res-total">NT$ 0</div>
-                    <div class="formula" id="res-formula"></div>
                 </div>
                 <button class="save-btn" onclick="saveRecord()">💾 儲存此筆報價到紀錄</button>
             </div>
@@ -481,36 +499,77 @@
             twdBase = fAmt * rate;
         }
 
+        // 信用卡手續費 1.5%
+        const cardFeeRate = 0.015;
+        let cardFeeTwd = (paymentMode === 'card') ? Math.round(twdBase * cardFeeRate) : 0;
+
         const isTaxRefund = document.getElementById('enable-tax-refund').checked;
-        const taxRate = (parseFloat(document.getElementById('official-tax-rate').value) || 0) / 100;
-        const storeRate = (parseFloat(document.getElementById('store-discount-rate').value) || 0) / 100;
+        const taxRateValue = (parseFloat(document.getElementById('official-tax-rate').value) || 0);
+        const taxRate = taxRateValue / 100;
+        const storeRateValue = (parseFloat(document.getElementById('store-discount-rate').value) || 0);
+        const storeRate = storeRateValue / 100;
         const svc = parseFloat(document.getElementById('service-fee').value) || 0;
         const ship = parseFloat(document.getElementById('shipping-fee').value) || 0;
 
-        let refundTwd = (isTaxRefund && taxBase === 'posttax') ? twdBase * taxRate : 0;
-        const discountTwd = twdBase * storeRate;
-        const total = twdBase - refundTwd - discountTwd + svc + ship;
+        let refundTwd = (isTaxRefund && taxBase === 'posttax') ? Math.round(twdBase * taxRate) : 0;
+        const discountTwd = Math.round(twdBase * storeRate);
+        const total = twdBase + cardFeeTwd - refundTwd - discountTwd + svc + ship;
 
         lastCalculation = {
             id: Date.now(),
             date: new Date().toLocaleString(),
-            buyer, item, fAmt, rate, twdBase, refundTwd, discountTwd, svc, ship, total,
-            currency: document.getElementById('currency-card').value
+            buyer, item, fAmt, rate, twdBase, refundTwd, discountTwd, cardFeeTwd, svc, ship, total,
+            taxRate: taxRateValue, storeRate: storeRateValue,
+            paymentMode,
+            currency: paymentMode === 'card' ? document.getElementById('currency-card').value : 'CASH'
         };
 
         renderResult(lastCalculation);
     }
 
     function renderResult(d) {
-        document.getElementById('summary-grid').innerHTML = `
-            <div class="result-item"><div class="label">外幣原價</div><div class="value accent">${d.fAmt} ${d.currency}</div></div>
-            <div class="result-item"><div class="label">匯率</div><div class="value gold">${d.rate.toFixed(4)}</div></div>
-            <div class="result-item"><div class="label">台幣基準</div><div class="value">NT$ ${Math.round(d.twdBase)}</div></div>
-            ${d.refundTwd > 0 ? `<div class="result-item"><div class="label">退稅折抵</div><div class="value green">-NT$ ${Math.round(d.refundTwd)}</div></div>` : ''}
-        `;
+        const body = document.getElementById('detail-list-body');
+        body.innerHTML = '';
+
+        const addRow = (label, desc, amount, colorClass = '') => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${label}</td>
+                <td style="color: var(--text-sub); font-size: 0.8rem;">${desc}</td>
+                <td class="${colorClass}">NT$ ${Math.round(amount).toLocaleString()}</td>
+            `;
+            body.appendChild(tr);
+        };
+
+        // 1. 原始台幣基準
+        addRow('商品台幣基準', `${d.fAmt} (${d.currency}) × ${d.rate.toFixed(4)}`, d.twdBase);
+
+        // 2. 刷卡手續費
+        if (d.cardFeeTwd > 0) {
+            addRow('刷卡交易手續費', `台幣基準 × 1.5%`, d.cardFeeTwd, 'red');
+        }
+
+        // 3. 退稅
+        if (d.refundTwd > 0) {
+            addRow('退稅款 (扣除)', `台幣基準 × ${d.taxRate}%`, -d.refundTwd, 'green');
+        }
+
+        // 4. 店家折扣
+        if (d.discountTwd > 0) {
+            addRow('店家折扣 (扣除)', `台幣基準 × ${d.storeRate}%`, -d.discountTwd, 'green');
+        }
+
+        // 5. 代購費
+        if (d.svc > 0) {
+            addRow('代購服務費', '固定費用', d.svc, 'accent');
+        }
+
+        // 6. 運費
+        if (d.ship > 0) {
+            addRow('國內/外運費', '物流成本', d.ship, 'accent');
+        }
 
         document.getElementById('res-total').textContent = `NT$ ${Math.round(d.total).toLocaleString()}`;
-        document.getElementById('res-formula').textContent = `計算公式：基準 ${Math.round(d.twdBase)} ${d.refundTwd > 0 ? '- 退稅 '+Math.round(d.refundTwd) : ''} ${d.discountTwd > 0 ? '- 折扣 '+Math.round(d.discountTwd) : ''} + 代購費 ${d.svc} + 運費 ${d.ship}`;
 
         const panel = document.getElementById('result-panel');
         panel.style.display = 'block';
@@ -545,7 +604,7 @@
                 </div>
                 <div class="history-item-name">📦 品項：${h.item}</div>
                 <div style="font-size:0.8rem; color:var(--text-sub);">
-                    外幣：${h.fAmt} (${h.rate.toFixed(3)}) | 代購費：${h.svc} | 運費：${h.ship}
+                    外幣：${h.fAmt} (${h.rate.toFixed(3)}) | 退稅：-${Math.round(h.refundTwd)} | 手續費：+${h.cardFeeTwd}
                 </div>
                 <div class="history-actions">
                     <button class="btn-sm delete" onclick="deleteRecord(${h.id})">刪除</button>
