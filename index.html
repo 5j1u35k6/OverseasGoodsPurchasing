@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>國外代購費用計算器 - 專業紀錄版</title>
-    <meta name="description" content="精準計算代購匯率、多國動態退稅、紀錄購買人資訊，一鍵存檔報價紀錄">
+    <title>國外代購費用計算器 - 品項拆分版</title>
+    <meta name="description" content="依據整單匯率計算單一品項報價，包含刷卡手續費、多國退稅機制與歷史紀錄。">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -20,10 +20,8 @@
         html { scroll-behavior: smooth; }
         body {
             font-family: 'Noto Sans TC', 'Inter', sans-serif;
-            background: var(--bg-deep);
-            color: var(--text-main);
-            min-height: 100vh;
-            line-height: 1.6;
+            background: var(--bg-deep); color: var(--text-main);
+            min-height: 100vh; line-height: 1.6;
         }
 
         body::before {
@@ -34,7 +32,6 @@
         }
 
         .wrapper { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
-        
         header { text-align: center; padding: 40px 0 24px; }
         .header-badge {
             display: inline-block; background: linear-gradient(135deg, rgba(108,99,255,0.25), rgba(167,139,250,0.15));
@@ -49,7 +46,6 @@
             line-height: 1.2;
         }
 
-        /* Tabs Navigation */
         .nav-tabs {
             display: flex; justify-content: center; gap: 10px; margin-bottom: 30px;
             background: var(--bg-card); padding: 6px; border-radius: 99px; border: 1px solid var(--border);
@@ -112,21 +108,6 @@
             color: #fff; font-size: 1.1rem; font-weight: 600; cursor: pointer;
             box-shadow: var(--glow); transition: all 0.2s; margin-top: 10px;
         }
-        .save-btn {
-            width: 100%; padding: 12px; border: 1px solid var(--accent); border-radius: var(--radius);
-            background: transparent; color: var(--accent2); font-size: 1rem; font-weight: 600;
-            cursor: pointer; transition: all 0.2s; margin-top: 12px;
-        }
-        .save-btn:hover { background: rgba(108,99,255,0.1); }
-
-        #result-panel { display: none; animation: fadeUp 0.5s ease; margin-top: 30px; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
-        .result-item { background: var(--bg-section); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; text-align: center; }
-        .result-item .label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
-        .result-item .value { font-size: 1.1rem; font-weight: 700; }
-        .accent { color: var(--accent2); } .gold { color: var(--gold); } .green { color: var(--green); } .red { color: var(--red); }
 
         .final-charge {
             background: linear-gradient(135deg, rgba(108,99,255,0.15), rgba(167,139,250,0.1));
@@ -134,54 +115,26 @@
             padding: 30px; text-align: center; margin-bottom: 20px;
         }
         .final-charge .amount { font-size: 2.8rem; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        
         .detail-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
         .detail-table th { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); color: var(--text-sub); }
         .detail-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .detail-table td:last-child { text-align: right; font-weight: 600; }
 
-        /* History View */
-        .history-list { display: flex; flex-direction: column; gap: 15px; }
         .history-card {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
-            padding: 20px; position: relative; transition: transform 0.2s;
+            padding: 20px; margin-bottom: 15px;
         }
-        .history-card:hover { transform: scale(1.01); }
-        .history-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-        .history-user { font-weight: 700; color: var(--accent2); font-size: 1.1rem; }
-        .history-date { font-size: 0.75rem; color: var(--text-muted); }
-        .history-item-name { color: var(--text-main); font-size: 0.9rem; margin-bottom: 8px; }
-        .history-total { font-size: 1.3rem; font-weight: 800; color: #fff; }
-        .history-actions { display: flex; gap: 10px; margin-top: 15px; }
-        .btn-sm { padding: 6px 12px; font-size: 0.75rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-sub); }
-        .btn-sm.delete:hover { background: rgba(248,113,113,0.2); color: var(--red); border-color: var(--red); }
-
-        .check-row { display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 12px 0; }
-        .custom-check {
-            width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 4px;
-            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
-        }
-        input[type="checkbox"] { display: none; }
-        input[type="checkbox"]:checked + .custom-check { background: var(--accent); border-color: var(--accent); }
-        input[type="checkbox"]:checked + .custom-check::after { content: '✓'; color: #fff; font-size: 12px; }
-
-        .collapsible { max-height: 0; opacity: 0; overflow: hidden; transition: all 0.4s ease; }
-        .collapsible.open { max-height: 1000px; opacity: 1; margin-top: 16px; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .history-user { font-weight: 700; color: var(--accent2); }
 
         .msg-box {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             padding: 12px 24px; border-radius: 99px; background: var(--bg-card);
-            border: 1px solid var(--accent); box-shadow: var(--shadow); z-index: 1000;
-            display: none; animation: slideDown 0.3s ease; color: #fff;
+            border: 1px solid var(--accent); z-index: 1000; display: none; color: #fff;
         }
-        @keyframes slideDown { from { top: -50px; } to { top: 20px; } }
 
-        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-
-        @media (max-width: 600px) {
-            .wrapper { padding: 0 15px 40px; }
-            .card { padding: 20px; }
-            header { padding: 24px 0; }
-        }
+        @media (max-width: 600px) { .wrapper { padding: 0 15px 40px; } }
     </style>
 </head>
 <body>
@@ -190,8 +143,8 @@
 
 <div class="wrapper">
     <header>
-        <div class="header-badge">Agent Pro</div>
-        <h1>代購報價與紀錄系統</h1>
+        <div class="header-badge">Item Pricing Pro</div>
+        <h1>單一品項精準報價</h1>
     </header>
 
     <div class="nav-tabs">
@@ -199,228 +152,146 @@
         <button class="nav-tab" onclick="switchView('history')">📜 歷史紀錄</button>
     </div>
 
-    <!-- View: Calculator -->
     <div id="view-calc" class="view active">
-        <!-- 委託資訊 -->
+        <!-- ① 匯率基準 (單據 A) -->
         <div class="card">
-            <div class="card-title"><div class="icon icon-blue">👤</div>委託資訊</div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>購買人姓名 / 綽號</label>
-                    <input type="text" id="buyer-name" placeholder="例如：林小姐">
-                </div>
-                <div class="form-group">
-                    <label>購買品項內容</label>
-                    <input type="text" id="item-description" placeholder="例如：Dior 錢包、日本藥妝一批">
-                </div>
-            </div>
-        </div>
-
-        <!-- ① 匯率設定 -->
-        <div class="card">
-            <div class="card-title"><div class="icon icon-purple">💱</div>① 匯率與付款方式</div>
-            <div class="form-group" style="margin-bottom:18px">
+            <div class="card-title"><div class="icon icon-purple">📑</div>① 鎖定整單匯率 (Receipt A)</div>
+            <div class="form-group" style="margin-bottom:15px">
                 <label>付款方式</label>
                 <div class="toggle-group">
                     <button class="toggle-btn active" id="btn-card" onclick="setPayment('card')">💳 信用卡刷卡</button>
                     <button class="toggle-btn" id="btn-cash" onclick="setPayment('cash')">💵 現金付款</button>
                 </div>
             </div>
-
+            
             <div id="mode-card" class="collapsible open">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>外幣收據金額<span class="req">*</span></label>
-                        <input type="number" id="foreign-amount" placeholder="0" oninput="autoCalcRate()">
+                        <label>整單收據外幣總額 (A)</label>
+                        <input type="number" id="receipt-foreign" placeholder="如：20000" oninput="autoCalcRate()">
                     </div>
                     <div class="form-group">
                         <label>幣別</label>
-                        <select id="currency-card" onchange="autoCalcRate()">
+                        <select id="currency-select">
                             <option value="JPY">日圓 JPY</option>
                             <option value="KRW">韓元 KRW</option>
                             <option value="USD">美元 USD</option>
                             <option value="EUR">歐元 EUR</option>
-                            <option value="THB">泰銖 THB</option>
-                            <option value="HKD">港幣 HKD</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>銀行台幣扣款<span class="req">*</span></label>
-                        <input type="number" id="twd-charged" placeholder="0" oninput="autoCalcRate()">
+                        <label>整單台幣扣款 (不含手續費)</label>
+                        <input type="number" id="receipt-twd" placeholder="如：4000" oninput="autoCalcRate()">
                     </div>
                 </div>
-                <div id="auto-rate-box" class="info-box" style="display:none">
-                    🔍 <b>實質匯率：</b><span id="auto-rate-text"></span>
-                </div>
-                <div class="info-box" style="border-color: var(--gold); background: rgba(245,200,66,0.05);">
-                    💡 刷卡模式將自動外加 <b>1.5%</b> 國外交易手續費
+                <div id="rate-display" class="info-box" style="display:none">
+                    🔍 <b>目前匯率基準：</b><span id="rate-text"></span>
                 </div>
             </div>
 
             <div id="mode-cash" class="collapsible">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>現金外幣金額<span class="req">*</span></label>
-                        <input type="number" id="cash-foreign" placeholder="0">
+                        <label>換匯外幣金額</label>
+                        <input type="number" id="cash-foreign" placeholder="如：10000">
                     </div>
                     <div class="form-group">
-                        <label>換匯匯率</label>
-                        <input type="number" id="cash-rate" placeholder="如：0.215" step="0.0001">
+                        <label>實際換匯台幣</label>
+                        <input type="number" id="cash-twd" placeholder="如：2200">
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ② 國家與退稅 -->
+        <!-- ② 品項資訊 (商品 B) -->
         <div class="card">
-            <div class="card-title"><div class="icon icon-green">🌍</div>② 國家與退稅設定</div>
+            <div class="card-title"><div class="icon icon-blue">🏷️</div>② 輸入商品資訊 (Item B)</div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>購買國家</label>
+                    <label>購買人</label>
+                    <input type="text" id="buyer-name" placeholder="林小姐">
+                </div>
+                <div class="form-group">
+                    <label>品項名稱</label>
+                    <input type="text" id="item-name" placeholder="日系襯衫">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>商品外幣單價</label>
+                    <input type="number" id="item-price-foreign" placeholder="如：1000">
+                </div>
+                <div class="form-group">
+                    <label>數量</label>
+                    <input type="number" id="item-qty" value="1">
+                </div>
+            </div>
+        </div>
+
+        <!-- ③ 退稅與額外費用 -->
+        <div class="card">
+            <div class="card-title"><div class="icon icon-green">🌍</div>③ 退稅與其他費用</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>購買國家 (自動帶入退稅)</label>
                     <select id="country-select" onchange="onCountryChange()">
-                        <option value="">-- 請選擇國家 --</option>
-                        <option value="JP">🇯🇵 日本 (Japan)</option>
-                        <option value="KR">🇰🇷 韓國 (Korea)</option>
-                        <option value="EU">🇪🇺 歐盟 (EU - 法德義)</option>
-                        <option value="TH">🇹🇭 泰國 (Thailand)</option>
+                        <option value="">-- 請選擇 --</option>
+                        <option value="JP_G">🇯🇵 日本 (一般 10%)</option>
+                        <option value="JP_C">🇯🇵 日本 (消耗品 8%)</option>
+                        <option value="KR">🇰🇷 韓國 (10%)</option>
+                        <option value="EU">🇪🇺 歐盟 (12%)</option>
                     </select>
                 </div>
-                <div id="category-group" class="form-group" style="display:none">
-                    <label>商品類別</label>
-                    <select id="item-category" onchange="onCategoryChange()">
-                        <!-- 動態生成 -->
-                    </select>
+                <div class="form-group">
+                    <label>自訂退稅率 (%)</label>
+                    <input type="number" id="tax-rate" value="0">
                 </div>
             </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>官方退稅率 (%)</label>
-                    <input type="number" id="official-tax-rate" placeholder="0" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>店家額外折扣 (%)</label>
-                    <input type="number" id="store-discount-rate" placeholder="0" step="0.1">
-                </div>
-            </div>
-
             <label class="check-row">
-                <input type="checkbox" id="enable-tax-refund" onchange="toggleTaxSection()">
+                <input type="checkbox" id="is-posttax" checked>
                 <span class="custom-check"></span>
-                <span class="check-label">確認有退稅需求</span>
+                <span class="check-label">這是「稅後退稅」(需從總額扣除)</span>
             </label>
-
-            <div id="tax-section" class="collapsible">
-                <div class="form-group">
-                    <label>退稅類型</label>
-                    <div class="toggle-group">
-                        <button class="toggle-btn active" id="btn-posttax" onclick="setTaxBase('posttax')">稅後退還 (先付含稅價)</button>
-                        <button class="toggle-btn" id="btn-pretax" onclick="setTaxBase('pretax')">稅前免稅 (現場直接免稅)</button>
-                    </div>
-                    <div id="tax-hint" class="info-box">
-                        💡 <b>稅後退還：</b>您支付了含稅價。之後領回的退稅款會從報價中扣除。
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ③ 服務費與運費 -->
-        <div class="card">
-            <div class="card-title"><div class="icon icon-gold">📦</div>③ 其他費用</div>
             <div class="form-row">
                 <div class="form-group">
                     <label>代購服務費 (台幣)</label>
-                    <input type="number" id="service-fee" placeholder="0">
+                    <input type="number" id="service-fee" value="0">
                 </div>
                 <div class="form-group">
-                    <label>國內/國際運費 (台幣)</label>
-                    <input type="number" id="shipping-fee" placeholder="0">
+                    <label>運費 (台幣)</label>
+                    <input type="number" id="shipping-fee" value="0">
                 </div>
             </div>
         </div>
 
-        <button class="calc-btn" onclick="calculate()">🧮 計算應收總額</button>
+        <button class="calc-btn" onclick="calculate()">🧮 計算該商品應收金額</button>
 
-        <div id="result-panel">
+        <div id="result-panel" style="display:none; margin-top:30px;">
             <div class="card">
-                <div class="card-title"><div class="icon icon-purple">📊</div>費用明細表</div>
+                <div class="card-title"><div class="icon icon-purple">📊</div>報價明細表</div>
                 <table class="detail-table">
                     <thead>
-                        <tr>
-                            <th>項目</th>
-                            <th>說明 / 計算式</th>
-                            <th>台幣金額</th>
-                        </tr>
+                        <tr><th>項目</th><th>計算說明</th><th>台幣金額</th></tr>
                     </thead>
-                    <tbody id="detail-list-body">
-                        <!-- 動態填充 -->
-                    </tbody>
+                    <tbody id="detail-list"></tbody>
                 </table>
                 <div class="final-charge">
-                    <div style="font-size: 0.9rem; color: var(--text-sub); margin-bottom: 5px;">應收合計</div>
+                    <div style="font-size:0.9rem; color:var(--text-sub);">該商品應收總計</div>
                     <div class="amount" id="res-total">NT$ 0</div>
                 </div>
-                <button class="save-btn" onclick="saveRecord()">💾 儲存此筆報價到紀錄</button>
+                <button class="calc-btn" style="background:transparent; border:1px solid var(--accent); color:var(--accent2);" onclick="saveRecord()">💾 儲存紀錄</button>
             </div>
         </div>
     </div>
 
-    <!-- View: History -->
     <div id="view-history" class="view">
-        <div id="history-container" class="history-list">
-            <!-- 歷史紀錄將在這裡動態生成 -->
-        </div>
+        <div id="history-list" class="history-list"></div>
     </div>
 </div>
 
 <script>
-    // 國家與類別稅率資料庫
-    const COUNTRY_RULES = {
-        JP: {
-            categories: [
-                { name: '一般商品 (精品/電器)', rate: 10, type: 'pretax' },
-                { name: '消耗品 (藥妝/食品)', rate: 8, type: 'pretax' }
-            ]
-        },
-        KR: {
-            categories: [
-                { name: '一般商品', rate: 10, type: 'posttax' }
-            ]
-        },
-        EU: {
-            categories: [
-                { name: '標準商品 (精品)', rate: 20, type: 'posttax' },
-                { name: '書籍/食品', rate: 7, type: 'posttax' }
-            ]
-        },
-        TH: {
-            categories: [
-                { name: '一般商品', rate: 7, type: 'posttax' }
-            ]
-        }
-    };
-
     let paymentMode = 'card';
-    let taxBase = 'posttax';
-    let lastCalculation = null;
-
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.style.display = 'block';
-        setTimeout(() => t.style.display = 'none', 3000);
-    }
-
-    function switchView(view) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-        
-        document.getElementById(`view-${view}`).classList.add('active');
-        const activeTab = Array.from(document.querySelectorAll('.nav-tab')).find(t => t.textContent.includes(view === 'calc' ? '計算' : '歷史'));
-        if(activeTab) activeTab.classList.add('active');
-
-        if(view === 'history') loadHistory();
-    }
+    let lastCalc = null;
 
     function setPayment(mode) {
         paymentMode = mode;
@@ -430,195 +301,120 @@
         document.getElementById('mode-cash').classList.toggle('open', mode === 'cash');
     }
 
-    function toggleTaxSection() {
-        const checked = document.getElementById('enable-tax-refund').checked;
-        document.getElementById('tax-section').classList.toggle('open', checked);
-    }
-
-    function setTaxBase(base) {
-        taxBase = base;
-        document.getElementById('btn-pretax').classList.toggle('active', base === 'pretax');
-        document.getElementById('btn-posttax').classList.toggle('active', base === 'posttax');
-        document.getElementById('tax-hint').innerHTML = base === 'pretax' 
-            ? '💡 <b>稅前免稅：</b>現場直接免稅。報價不會再額外扣除（因為基準價已是低價）。'
-            : '💡 <b>稅後退還：</b>您支付了含稅價。之後領回的退稅款會從報價中扣除。';
-    }
-
-    function onCountryChange() {
-        const code = document.getElementById('country-select').value;
-        const catGroup = document.getElementById('category-group');
-        const catSelect = document.getElementById('item-category');
-        
-        if (COUNTRY_RULES[code]) {
-            catGroup.style.display = 'flex';
-            catSelect.innerHTML = COUNTRY_RULES[code].categories.map((c, i) => 
-                `<option value="${i}">${c.name}</option>`
-            ).join('');
-            onCategoryChange();
-        } else {
-            catGroup.style.display = 'none';
-        }
-    }
-
-    function onCategoryChange() {
-        const code = document.getElementById('country-select').value;
-        const catIdx = document.getElementById('item-category').value;
-        const rule = COUNTRY_RULES[code].categories[catIdx];
-        
-        document.getElementById('official-tax-rate').value = rule.rate;
-        setTaxBase(rule.type);
+    function switchView(view) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(`view-${view}`).classList.add('active');
+        if (view === 'history') loadHistory();
     }
 
     function autoCalcRate() {
-        const f = parseFloat(document.getElementById('foreign-amount').value);
-        const t = parseFloat(document.getElementById('twd-charged').value);
-        const box = document.getElementById('auto-rate-box');
+        const f = parseFloat(document.getElementById('receipt-foreign').value);
+        const t = parseFloat(document.getElementById('receipt-twd').value);
+        const box = document.getElementById('rate-display');
         if (f > 0 && t > 0) {
             const rate = t / f;
-            document.getElementById('auto-rate-text').textContent = `1 外幣 = ${rate.toFixed(4)} TWD`;
+            document.getElementById('rate-text').textContent = `1 外幣 = ${rate.toFixed(5)} TWD`;
             box.style.display = 'block';
-        } else {
-            box.style.display = 'none';
-        }
+        } else { box.style.display = 'none'; }
+    }
+
+    function onCountryChange() {
+        const val = document.getElementById('country-select').value;
+        let rate = 0;
+        if (val === 'JP_G') rate = 10;
+        else if (val === 'JP_C') rate = 8;
+        else if (val === 'KR') rate = 10;
+        else if (val === 'EU') rate = 12;
+        document.getElementById('tax-rate').value = rate;
     }
 
     function calculate() {
-        let fAmt = 0, rate = 0, twdBase = 0;
-        const buyer = document.getElementById('buyer-name').value || '未命名委託人';
-        const item = document.getElementById('item-description').value || '未標註品項';
-
+        // 1. 取得匯率
+        let rate = 0;
         if (paymentMode === 'card') {
-            fAmt = parseFloat(document.getElementById('foreign-amount').value) || 0;
-            twdBase = parseFloat(document.getElementById('twd-charged').value) || 0;
-            if (fAmt <= 0 || twdBase <= 0) return showToast('請填寫完整金額與扣款');
-            rate = twdBase / fAmt;
+            const rf = parseFloat(document.getElementById('receipt-foreign').value) || 0;
+            const rt = parseFloat(document.getElementById('receipt-twd').value) || 0;
+            if (rf <= 0 || rt <= 0) return alert('請填寫整單外幣總額與台幣扣款');
+            rate = rt / rf;
         } else {
-            fAmt = parseFloat(document.getElementById('cash-foreign').value) || 0;
-            rate = parseFloat(document.getElementById('cash-rate').value) || 0;
-            if (fAmt <= 0 || rate <= 0) return showToast('請填寫完整外幣金額與換匯匯率');
-            twdBase = fAmt * rate;
+            const cf = parseFloat(document.getElementById('cash-foreign').value) || 0;
+            const ct = parseFloat(document.getElementById('cash-twd').value) || 0;
+            if (cf <= 0 || ct <= 0) return alert('請填寫現金換匯資訊');
+            rate = ct / cf;
         }
 
-        // 信用卡手續費 1.5%
-        const cardFeeRate = 0.015;
-        let cardFeeTwd = (paymentMode === 'card') ? Math.round(twdBase * cardFeeRate) : 0;
-
-        const isTaxRefund = document.getElementById('enable-tax-refund').checked;
-        const taxRateValue = (parseFloat(document.getElementById('official-tax-rate').value) || 0);
-        const taxRate = taxRateValue / 100;
-        const storeRateValue = (parseFloat(document.getElementById('store-discount-rate').value) || 0);
-        const storeRate = storeRateValue / 100;
+        // 2. 品項計算
+        const itemForeign = parseFloat(document.getElementById('item-price-foreign').value) || 0;
+        const itemQty = parseFloat(document.getElementById('item-qty').value) || 1;
+        const buyer = document.getElementById('buyer-name').value || '未命名';
+        const itemName = document.getElementById('item-name').value || '商品';
+        
+        const itemTwdBase = itemForeign * itemQty * rate;
+        
+        // 3. 額外費用
+        const isCC = paymentMode === 'card';
+        const ccFee = isCC ? Math.round(itemTwdBase * 0.015) : 0;
+        
+        const taxRate = (parseFloat(document.getElementById('tax-rate').value) || 0) / 100;
+        const isPostTax = document.getElementById('is-posttax').checked;
+        const refundTwd = isPostTax ? Math.round(itemTwdBase * taxRate) : 0;
+        
         const svc = parseFloat(document.getElementById('service-fee').value) || 0;
         const ship = parseFloat(document.getElementById('shipping-fee').value) || 0;
+        
+        const total = Math.round(itemTwdBase + ccFee - refundTwd + svc + ship);
 
-        let refundTwd = (isTaxRefund && taxBase === 'posttax') ? Math.round(twdBase * taxRate) : 0;
-        const discountTwd = Math.round(twdBase * storeRate);
-        const total = twdBase + cardFeeTwd - refundTwd - discountTwd + svc + ship;
-
-        lastCalculation = {
-            id: Date.now(),
-            date: new Date().toLocaleString(),
-            buyer, item, fAmt, rate, twdBase, refundTwd, discountTwd, cardFeeTwd, svc, ship, total,
-            taxRate: taxRateValue, storeRate: storeRateValue,
-            paymentMode,
-            currency: paymentMode === 'card' ? document.getElementById('currency-card').value : 'CASH'
-        };
-
-        renderResult(lastCalculation);
-    }
-
-    function renderResult(d) {
-        const body = document.getElementById('detail-list-body');
-        body.innerHTML = '';
-
-        const addRow = (label, desc, amount, colorClass = '') => {
+        // 4. 渲染
+        const list = document.getElementById('detail-list');
+        list.innerHTML = '';
+        const add = (n, c, v, cl='') => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${label}</td>
-                <td style="color: var(--text-sub); font-size: 0.8rem;">${desc}</td>
-                <td class="${colorClass}">NT$ ${Math.round(amount).toLocaleString()}</td>
-            `;
-            body.appendChild(tr);
+            tr.innerHTML = `<td>${n}</td><td style="color:var(--text-muted); font-size:0.8rem;">${c}</td><td class="${cl}">NT$ ${Math.round(v).toLocaleString()}</td>`;
+            list.appendChild(tr);
         };
 
-        // 1. 原始台幣基準
-        addRow('商品台幣基準', `${d.fAmt} (${d.currency}) × ${d.rate.toFixed(4)}`, d.twdBase);
+        add('品項台幣基準', `${itemForeign} × ${itemQty} × 匯率 ${rate.toFixed(4)}`, itemTwdBase);
+        if(isCC) add('刷卡手續費', '台幣基準 × 1.5%', ccFee, 'red');
+        if(refundTwd > 0) add('退稅折抵', `台幣基準 × ${taxRate*100}%`, -refundTwd, 'green');
+        if(svc > 0) add('代購服務費', '固定費用', svc, 'accent');
+        if(ship > 0) add('國內/外運費', '物流成本', ship, 'accent');
 
-        // 2. 刷卡手續費
-        if (d.cardFeeTwd > 0) {
-            addRow('刷卡交易手續費', `台幣基準 × 1.5%`, d.cardFeeTwd, 'red');
-        }
+        document.getElementById('res-total').textContent = `NT$ ${total.toLocaleString()}`;
+        document.getElementById('result-panel').style.display = 'block';
+        window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
 
-        // 3. 退稅
-        if (d.refundTwd > 0) {
-            addRow('退稅款 (扣除)', `台幣基準 × ${d.taxRate}%`, -d.refundTwd, 'green');
-        }
-
-        // 4. 店家折扣
-        if (d.discountTwd > 0) {
-            addRow('店家折扣 (扣除)', `台幣基準 × ${d.storeRate}%`, -d.discountTwd, 'green');
-        }
-
-        // 5. 代購費
-        if (d.svc > 0) {
-            addRow('代購服務費', '固定費用', d.svc, 'accent');
-        }
-
-        // 6. 運費
-        if (d.ship > 0) {
-            addRow('國內/外運費', '物流成本', d.ship, 'accent');
-        }
-
-        document.getElementById('res-total').textContent = `NT$ ${Math.round(d.total).toLocaleString()}`;
-
-        const panel = document.getElementById('result-panel');
-        panel.style.display = 'block';
-        setTimeout(() => panel.scrollIntoView({ behavior: 'smooth' }), 200);
+        lastCalc = { buyer, itemName, total, date: new Date().toLocaleString() };
     }
 
     function saveRecord() {
-        if (!lastCalculation) return;
-        const history = JSON.parse(localStorage.getItem('agent_history') || '[]');
-        history.unshift(lastCalculation);
-        localStorage.setItem('agent_history', JSON.stringify(history));
-        showToast('✅ 紀錄已成功儲存');
+        if (!lastCalc) return;
+        const history = JSON.parse(localStorage.getItem('agent_records') || '[]');
+        history.unshift(lastCalc);
+        localStorage.setItem('agent_records', JSON.stringify(history));
+        const t = document.getElementById('toast');
+        t.textContent = '✅ 已儲存至歷史紀錄';
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2000);
     }
 
     function loadHistory() {
-        const history = JSON.parse(localStorage.getItem('agent_history') || '[]');
-        const container = document.getElementById('history-container');
-        
+        const history = JSON.parse(localStorage.getItem('agent_records') || '[]');
+        const container = document.getElementById('history-list');
         if (history.length === 0) {
-            container.innerHTML = `<div class="empty-state">目前還沒有紀錄，開始計算第一筆報價吧！</div>`;
+            container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">尚無紀錄</div>';
             return;
         }
-
-        container.innerHTML = history.map(h => `
+        container.innerHTML = history.map((h, i) => `
             <div class="history-card">
                 <div class="history-header">
-                    <div>
-                        <div class="history-user">${h.buyer}</div>
-                        <div class="history-date">${h.date}</div>
-                    </div>
-                    <div class="history-total">NT$ ${Math.round(h.total).toLocaleString()}</div>
+                    <span class="history-user">${h.buyer}</span>
+                    <span style="font-size:0.8rem; color:var(--text-muted);">${h.date}</span>
                 </div>
-                <div class="history-item-name">📦 品項：${h.item}</div>
-                <div style="font-size:0.8rem; color:var(--text-sub);">
-                    外幣：${h.fAmt} (${h.rate.toFixed(3)}) | 退稅：-${Math.round(h.refundTwd)} | 手續費：+${h.cardFeeTwd}
-                </div>
-                <div class="history-actions">
-                    <button class="btn-sm delete" onclick="deleteRecord(${h.id})">刪除</button>
-                </div>
+                <div>品項：${h.itemName}</div>
+                <div style="font-size:1.2rem; font-weight:800; color:var(--accent2); margin-top:5px;">NT$ ${h.total.toLocaleString()}</div>
             </div>
         `).join('');
-    }
-
-    function deleteRecord(id) {
-        let history = JSON.parse(localStorage.getItem('agent_history') || '[]');
-        history = history.filter(h => h.id !== id);
-        localStorage.setItem('agent_history', JSON.stringify(history));
-        loadHistory();
-        showToast('🗑️ 紀錄已刪除');
     }
 </script>
 </body>
