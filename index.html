@@ -92,7 +92,7 @@
         .toggle-group { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-input); }
         .toggle-btn {
             flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-sub);
-            cursor: pointer; font-size: 0.88rem; transition: all 0.2s;
+            cursor: pointer; font-size: 0.82rem; transition: all 0.2s;
         }
         .toggle-btn.active { background: var(--accent); color: #fff; }
 
@@ -233,7 +233,7 @@
             <div class="card-title"><div class="icon icon-green">🌍</div>③ 退稅與其他費用</div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>購買國家 (自動帶入退稅)</label>
+                    <label>購買國家 (自動帶入稅率)</label>
                     <select id="country-select" onchange="onCountryChange()">
                         <option value="">-- 請選擇 --</option>
                         <option value="JP_G">🇯🇵 日本 (一般 10%)</option>
@@ -243,16 +243,30 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>自訂退稅率 (%)</label>
+                    <label>政府退稅率 (%)</label>
                     <input type="number" id="tax-rate" value="0">
                 </div>
             </div>
-            <label class="check-row">
-                <input type="checkbox" id="is-posttax" checked>
-                <span class="custom-check"></span>
-                <span class="check-label">這是「稅後退稅」(需從總額扣除)</span>
-            </label>
+
             <div class="form-row">
+                <div class="form-group">
+                    <label>退稅類型</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="tax-post" onclick="setTaxType('posttax')">稅後退稅 (需從總額扣除)</button>
+                        <button class="toggle-btn" id="tax-pre" onclick="setTaxType('pretax')">稅前免稅 (現場已扣除)</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>店家額外折扣 (%)</label>
+                    <input type="number" id="store-discount" value="0" placeholder="如：5% 折扣券">
+                </div>
+            </div>
+            
+            <div id="tax-hint" class="info-box">
+                💡 <b>稅後退稅：</b>代表收據金額為「含稅價」，計算後需扣回退稅台幣。
+            </div>
+
+            <div class="form-row" style="margin-top: 16px;">
                 <div class="form-group">
                     <label>代購服務費 (台幣)</label>
                     <input type="number" id="service-fee" value="0">
@@ -291,6 +305,7 @@
 
 <script>
     let paymentMode = 'card';
+    let taxType = 'posttax';
     let lastCalc = null;
 
     function setPayment(mode) {
@@ -299,6 +314,18 @@
         document.getElementById('btn-cash').classList.toggle('active', mode === 'cash');
         document.getElementById('mode-card').classList.toggle('open', mode === 'card');
         document.getElementById('mode-cash').classList.toggle('open', mode === 'cash');
+    }
+
+    function setTaxType(type) {
+        taxType = type;
+        document.getElementById('tax-post').classList.toggle('active', type === 'posttax');
+        document.getElementById('tax-pre').classList.toggle('active', type === 'pretax');
+        const hint = document.getElementById('tax-hint');
+        if (type === 'posttax') {
+            hint.innerHTML = '💡 <b>稅後退稅：</b>代表收據金額為「含稅價」，計算後需扣回退稅台幣。';
+        } else {
+            hint.innerHTML = '💡 <b>稅前免稅：</b>代表現場已是免稅價支付，報價不會再扣除退稅。';
+        }
     }
 
     function switchView(view) {
@@ -322,11 +349,15 @@
     function onCountryChange() {
         const val = document.getElementById('country-select').value;
         let rate = 0;
-        if (val === 'JP_G') rate = 10;
-        else if (val === 'JP_C') rate = 8;
-        else if (val === 'KR') rate = 10;
-        else if (val === 'EU') rate = 12;
+        let defaultType = 'posttax';
+        
+        if (val === 'JP_G') { rate = 10; defaultType = 'pretax'; }
+        else if (val === 'JP_C') { rate = 8; defaultType = 'pretax'; }
+        else if (val === 'KR') { rate = 10; defaultType = 'posttax'; }
+        else if (val === 'EU') { rate = 12; defaultType = 'posttax'; }
+        
         document.getElementById('tax-rate').value = rate;
+        setTaxType(defaultType);
     }
 
     function calculate() {
@@ -352,18 +383,20 @@
         
         const itemTwdBase = itemForeign * itemQty * rate;
         
-        // 3. 額外費用
+        // 3. 額外費用與折扣
         const isCC = paymentMode === 'card';
         const ccFee = isCC ? Math.round(itemTwdBase * 0.015) : 0;
         
-        const taxRate = (parseFloat(document.getElementById('tax-rate').value) || 0) / 100;
-        const isPostTax = document.getElementById('is-posttax').checked;
-        const refundTwd = isPostTax ? Math.round(itemTwdBase * taxRate) : 0;
+        const govTaxRate = (parseFloat(document.getElementById('tax-rate').value) || 0) / 100;
+        const govRefundTwd = (taxType === 'posttax') ? Math.round(itemTwdBase * govTaxRate) : 0;
+
+        const storeDiscRate = (parseFloat(document.getElementById('store-discount').value) || 0) / 100;
+        const storeRefundTwd = Math.round(itemTwdBase * storeDiscRate);
         
         const svc = parseFloat(document.getElementById('service-fee').value) || 0;
         const ship = parseFloat(document.getElementById('shipping-fee').value) || 0;
         
-        const total = Math.round(itemTwdBase + ccFee - refundTwd + svc + ship);
+        const total = Math.round(itemTwdBase + ccFee - govRefundTwd - storeRefundTwd + svc + ship);
 
         // 4. 渲染
         const list = document.getElementById('detail-list');
@@ -376,7 +409,8 @@
 
         add('品項台幣基準', `${itemForeign} × ${itemQty} × 匯率 ${rate.toFixed(4)}`, itemTwdBase);
         if(isCC) add('刷卡手續費', '台幣基準 × 1.5%', ccFee, 'red');
-        if(refundTwd > 0) add('退稅折抵', `台幣基準 × ${taxRate*100}%`, -refundTwd, 'green');
+        if(govRefundTwd > 0) add('政府退稅', `台幣基準 × ${govTaxRate*100}%`, -govRefundTwd, 'green');
+        if(storeRefundTwd > 0) add('店家折扣/退稅', `台幣基準 × ${storeDiscRate*100}%`, -storeRefundTwd, 'green');
         if(svc > 0) add('代購服務費', '固定費用', svc, 'accent');
         if(ship > 0) add('國內/外運費', '物流成本', ship, 'accent');
 
