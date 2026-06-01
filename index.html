@@ -1,167 +1,214 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Pro - 專業代購報價系統</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & Babel (CDN 模式) -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- html2canvas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AgentPro</title>
+
+  <!-- React -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+  <!-- Babel (讓瀏覽器支援 JSX) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-50">
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        const { CreditCard, Banknote, User, ShoppingBag, Globe, Receipt, Truck, FileCheck, Save, Trash2, Calculator, TrendingUp, Image, Copy } = lucide;
+<body>
+<div id="root"></div>
 
-        function App() {
-            const [activeTab, setActiveTab] = useState('calc');
-            const [history, setHistory] = useState([]);
-            const receiptRef = useRef(null);
-            const [isCopying, setIsCopying] = useState(false);
+<script type="text/babel">
 
-            // 狀態定義
-            const [paymentMethod, setPaymentMethod] = useState('card');
-            const [currency, setCurrency] = useState('JPY');
-            const [receiptForeign, setReceiptForeign] = useState('');
-            const [receiptTwd, setReceiptTwd] = useState('');
-            const [cashForeign, setCashForeign] = useState('');
-            const [cashTwd, setCashTwd] = useState('');
-            const [buyerName, setBuyerName] = useState('');
-            const [itemName, setItemName] = useState('');
-            const [itemForeignPrice, setItemForeignPrice] = useState('');
-            const [itemQty, setItemQty] = useState(1);
-            const [country, setCountry] = useState('JP_10');
-            const [taxRate, setTaxRate] = useState(10);
-            const [taxType, setTaxType] = useState('pretax'); 
-            const [storeDiscount, setStoreDiscount] = useState('');
-            const [serviceFee, setServiceFee] = useState('');
-            const [shippingFee, setShippingFee] = useState('');
-            const [result, setResult] = useState(null);
+const { useState, useEffect, useRef } = React;
+const {
+  CreditCard, Banknote, User, ShoppingBag, Globe, Receipt,
+  Truck, FileCheck, Save, Trash2, Calculator, TrendingUp,
+  Store, DollarSign, Copy, Image
+} = lucide;
 
-            useEffect(() => {
-                const saved = localStorage.getItem('agent_pro_records');
-                if (saved) setHistory(JSON.parse(saved));
-            }, []);
+function App() {
+  const [activeTab, setActiveTab] = useState('calc');
+  const [history, setHistory] = useState([]);
 
-            const getActualCostRate = () => {
-                if (paymentMethod === 'card') {
-                    const rf = parseFloat(receiptForeign);
-                    const rt = parseFloat(receiptTwd);
-                    return (rf > 0 && rt > 0) ? (rt / rf) : 0;
-                } else {
-                    const cf = parseFloat(cashForeign);
-                    const ct = parseFloat(cashTwd);
-                    return (cf > 0 && ct > 0) ? (ct / cf) : 0;
-                }
-            };
+  const receiptRef = useRef(null);
+  const [isCopying, setIsCopying] = useState(false);
 
-            const calculate = () => {
-                const actualRate = getActualCostRate();
-                if (actualRate <= 0) return alert('請填寫完整「收據金額」與「台幣扣款」以計算匯率。');
-                const price = parseFloat(itemForeignPrice) || 0;
-                const qty = parseInt(itemQty) || 1;
-                if (price <= 0) return alert('請填寫商品外幣單價。');
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [currency, setCurrency] = useState('JPY');
+  const [receiptForeign, setReceiptForeign] = useState('');
+  const [receiptTwd, setReceiptTwd] = useState('');
+  const [cashForeign, setCashForeign] = useState('');
+  const [cashTwd, setCashTwd] = useState('');
 
-                const baseItemTwd = price * qty * actualRate;
-                const creditCardFeeTwd = paymentMethod === 'card' ? (baseItemTwd * 0.015) : 0;
-                const govRefundTwd = (taxType === 'posttax') ? (baseItemTwd * (parseFloat(taxRate) || 0) / 100) : 0;
-                const storeRefundTwd = baseItemTwd * ((parseFloat(storeDiscount) || 0) / 100);
-                const sFee = parseFloat(shippingFee) || 0;
-                const svc = parseFloat(serviceFee) || 0;
+  const [buyerName, setBuyerName] = useState('');
+  const [itemName, setItemName] = useState('');
+  const [itemForeignPrice, setItemForeignPrice] = useState('');
+  const [itemQty, setItemQty] = useState(1);
 
-                const finalChargeTwd = baseItemTwd + creditCardFeeTwd - govRefundTwd - storeRefundTwd + sFee + svc;
+  const [country, setCountry] = useState('JP_10');
+  const [taxRate, setTaxRate] = useState(10);
+  const [taxType, setTaxType] = useState('pretax');
+  const [storeDiscount, setStoreDiscount] = useState('');
 
-                setResult({
-                    id: Date.now(),
-                    date: new Date().toLocaleString(),
-                    buyer: buyerName || '委託人',
-                    item: itemName || '代購商品',
-                    baseItemTwd, creditCardFeeTwd, govRefundTwd, storeRefundTwd, sFee, svc, finalChargeTwd
-                });
-            };
+  const [shippingFee, setShippingFee] = useState('');
+  const [serviceFeeType, setServiceFeeType] = useState('fixed');
+  const [serviceFeeValue, setServiceFeeValue] = useState(150);
+  const [platformFeeRate, setPlatformFeeRate] = useState(0);
 
-            const saveRecord = () => {
-                if (!result) return;
-                const newHistory = [result, ...history];
-                setHistory(newHistory);
-                localStorage.setItem('agent_pro_records', JSON.stringify(newHistory));
-                alert('✅ 已儲存！');
-            };
+  const [result, setResult] = useState(null);
 
-            const copyToImage = async () => {
-                if (!receiptRef.current) return;
-                setIsCopying(true);
-                const canvas = await html2canvas(receiptRef.current, { scale: 2, backgroundColor: '#1e293b' });
-                canvas.toBlob(async (blob) => {
-                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                    setIsCopying(false);
-                    alert('✅ 已複製圖片，請直接在聊天視窗貼上！');
-                });
-            };
+  useEffect(() => {
+    const saved = localStorage.getItem('agent_pro_advanced_records');
+    if (saved) setHistory(JSON.parse(saved));
 
-            return (
-                <div className="p-4 max-w-2xl mx-auto space-y-6">
-                    <h1 className="text-2xl font-bold text-center">代購報價系統</h1>
-                    
-                    {/* 付款區 */}
-                    <div className="bg-white p-4 rounded-lg shadow">
-                        <h2 className="font-bold mb-3">1. 付款方式</h2>
-                        <div className="flex gap-2">
-                            <button onClick={()=>setPaymentMethod('card')} className={`flex-1 p-2 rounded ${paymentMethod==='card'?'bg-blue-600 text-white':'bg-gray-100'}`}>信用卡</button>
-                            <button onClick={()=>setPaymentMethod('cash')} className={`flex-1 p-2 rounded ${paymentMethod==='cash'?'bg-blue-600 text-white':'bg-gray-100'}`}>現金</button>
-                        </div>
-                        {paymentMethod === 'card' ? (
-                            <div className="grid grid-cols-2 gap-2 mt-3">
-                                <input placeholder="收據外幣總額" onChange={e=>setReceiptForeign(e.target.value)} className="border p-2 rounded"/>
-                                <input placeholder="台幣扣款總額" onChange={e=>setReceiptTwd(e.target.value)} className="border p-2 rounded"/>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 gap-2 mt-3">
-                                <input placeholder="現金換匯外幣" onChange={e=>setCashForeign(e.target.value)} className="border p-2 rounded"/>
-                                <input placeholder="實際台幣金額" onChange={e=>setCashTwd(e.target.value)} className="border p-2 rounded"/>
-                            </div>
-                        )}
-                    </div>
+    if (!window.html2canvas) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      document.head.appendChild(script);
+    }
+  }, []);
 
-                    {/* 購買資訊 */}
-                    <div className="bg-white p-4 rounded-lg shadow">
-                        <h2 className="font-bold mb-3">2. 購買資訊</h2>
-                        <input placeholder="購買人" onChange={e=>setBuyerName(e.target.value)} className="w-full border p-2 rounded mb-2"/>
-                        <input placeholder="品項名稱" onChange={e=>setItemName(e.target.value)} className="w-full border p-2 rounded mb-2"/>
-                        <div className="grid grid-cols-2 gap-2">
-                            <input placeholder="單價 (外幣)" onChange={e=>setItemForeignPrice(e.target.value)} className="border p-2 rounded"/>
-                            <input placeholder="數量" onChange={e=>setItemQty(e.target.value)} className="border p-2 rounded"/>
-                        </div>
-                    </div>
+  const getActualCostRate = () => {
+    if (paymentMethod === 'card') {
+      const rf = parseFloat(receiptForeign);
+      const rt = parseFloat(receiptTwd);
+      return (rf > 0 && rt > 0) ? (rt / rf) : 0;
+    } else {
+      const cf = parseFloat(cashForeign);
+      const ct = parseFloat(cashTwd);
+      return (cf > 0 && ct > 0) ? (ct / cf) : 0;
+    }
+  };
 
-                    <button onClick={calculate} className="w-full bg-blue-600 text-white p-4 rounded-lg font-bold">立即計算</button>
+  const calculate = () => {
+    const actualRate = getActualCostRate();
+    if (actualRate <= 0) return alert('請先填寫匯率');
 
-                    {/* 結果 */}
-                    {result && (
-                        <div ref={receiptRef} className="bg-slate-800 text-white p-6 rounded-lg space-y-2">
-                            <h3 className="text-xl font-bold border-b border-slate-600 pb-2 mb-4">商品電子明細</h3>
-                            <div className="flex justify-between"><span>基準金額:</span><span>NT$ {result.baseItemTwd.toFixed(0)}</span></div>
-                            {result.creditCardFeeTwd > 0 && <div className="flex justify-between"><span>信用卡手續費(1.5%):</span><span>+ NT$ {result.creditCardFeeTwd.toFixed(0)}</span></div>}
-                            <div className="text-3xl font-black pt-4 border-t mt-4 text-blue-400">NT$ {result.finalChargeTwd.toFixed(0)}</div>
-                        </div>
-                    )}
-                    
-                    {result && <button onClick={copyToImage} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold">複製圖片</button>}
-                </div>
-            );
-        }
+    const price = parseFloat(itemForeignPrice) || 0;
+    const qty = parseInt(itemQty) || 1;
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+    const sFee = parseFloat(shippingFee) || 0;
+
+    const baseItemTwd = price * qty * actualRate;
+    const creditCardFeeTwd = paymentMethod === 'card' ? baseItemTwd * 0.015 : 0;
+
+    const tRate = (parseFloat(taxRate) || 0) / 100;
+    const govRefundTwd = (taxType === 'posttax') ? baseItemTwd * tRate : 0;
+
+    const dRate = (parseFloat(storeDiscount) || 0) / 100;
+    const storeRefundTwd = baseItemTwd * dRate;
+
+    const serviceFeeTwd = serviceFeeType === 'fixed'
+      ? (parseFloat(serviceFeeValue) || 0)
+      : baseItemTwd * ((parseFloat(serviceFeeValue) || 0) / 100);
+
+    const subTotal = baseItemTwd + creditCardFeeTwd - govRefundTwd - storeRefundTwd + sFee + serviceFeeTwd;
+    const platformFeeTwd = subTotal * ((parseFloat(platformFeeRate) || 0) / 100);
+
+    const finalChargeTwd = subTotal + platformFeeTwd;
+
+    setResult({
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      buyer: buyerName,
+      item: itemName,
+      currency,
+      actualRate,
+      price,
+      qty,
+      baseItemTwd,
+      ccFee: creditCardFeeTwd,
+      govRefund: govRefundTwd,
+      storeRefund: storeRefundTwd,
+      shipping: sFee,
+      svc: serviceFeeTwd,
+      platform: platformFeeTwd,
+      finalCharge: finalChargeTwd
+    });
+  };
+
+  const saveRecord = () => {
+    if (!result) return;
+    const newHistory = [result, ...history];
+    setHistory(newHistory);
+    localStorage.setItem('agent_pro_advanced_records', JSON.stringify(newHistory));
+    alert('已儲存');
+  };
+
+  const deleteRecord = (id) => {
+    const newHistory = history.filter(h => h.id !== id);
+    setHistory(newHistory);
+    localStorage.setItem('agent_pro_advanced_records', JSON.stringify(newHistory));
+  };
+
+  const copyToImage = async () => {
+    const canvas = await window.html2canvas(receiptRef.current, { scale: 2 });
+    canvas.toBlob(async (blob) => {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      alert('已複製圖片');
+    });
+  };
+
+  const formatMoney = (n) => Math.round(n).toLocaleString();
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">AgentPro</h1>
+
+      <button onClick={() => setActiveTab('calc')}>計算</button>
+      <button onClick={() => setActiveTab('history')}>歷史</button>
+
+      {activeTab === 'calc' && (
+        <div className="space-y-4">
+
+          <input placeholder="商品名稱" value={itemName} onChange={e=>setItemName(e.target.value)} />
+          <input placeholder="價格" value={itemForeignPrice} onChange={e=>setItemForeignPrice(e.target.value)} />
+
+          <button onClick={calculate} className="bg-black text-white p-2">
+            計算
+          </button>
+
+          {result && (
+            <div ref={receiptRef} className="bg-black text-white p-4 mt-4">
+              <p>{result.item}</p>
+              <p>總價 NT$ {formatMoney(result.finalCharge)}</p>
+            </div>
+          )}
+
+          {result && (
+            <div className="flex gap-2">
+              <button onClick={copyToImage}>複製圖片</button>
+              <button onClick={saveRecord}>儲存</button>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {activeTab === 'history' && (
+        <div>
+          {history.map(h => (
+            <div key={h.id} className="border p-2 mb-2">
+              <p>{h.item}</p>
+              <p>{formatMoney(h.finalCharge)}</p>
+              <button onClick={() => deleteRecord(h.id)}>刪除</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
 </body>
 </html>
