@@ -1,285 +1,455 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>國外代購費用計算網</title>
+    <meta name="description" content="依據整單匯率計算單一品項報價，包含刷卡手續費、多國退稅機制與歷史紀錄。">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0d0f1a; --bg-card: #151828; --bg-section: #1c2035; --bg-input: #222640;
+            --accent: #6c63ff; --accent2: #a78bfa; --gold: #f5c842; --gold2: #fde68a;
+            --green: #34d399; --red: #f87171; --text-main: #e8eaf6; --text-sub: #9ba3c8;
+            --text-muted: #5c6290; --border: #2e3353; --radius: 14px; --radius-sm: 8px;
+            --shadow: 0 8px 32px rgba(0,0,0,.4); --glow: 0 0 20px rgba(108,99,255,.3);
+        }
 
-<title>AgentPro</title>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Noto Sans TC', 'Inter', sans-serif;
+            background: var(--bg-deep); color: var(--text-main);
+            min-height: 100vh; line-height: 1.6;
+        }
 
-<style>
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background: radial-gradient(ellipse 60% 40% at 20% 20%, rgba(108,99,255,.12) 0%, transparent 70%),
+                        radial-gradient(ellipse 50% 50% at 80% 80%, rgba(167,139,250,.08) 0%, transparent 70%);
+            pointer-events: none; z-index: 0;
+        }
 
-body{
-    font-family: "Microsoft JhengHei", sans-serif;
-    background:#f5f5f5;
-    padding:20px;
-}
+        .wrapper { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+        header { text-align: center; padding: 40px 0 24px; }
+        .header-badge {
+            display: inline-block; background: linear-gradient(135deg, rgba(108,99,255,0.25), rgba(167,139,250,0.15));
+            border: 1px solid rgba(108,99,255,0.4); color: var(--accent2); font-size: 0.75rem;
+            font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+            padding: 5px 16px; border-radius: 99px; margin-bottom: 12px;
+        }
+        header h1 {
+            font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 700;
+            background: linear-gradient(135deg, #fff 30%, var(--accent2) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
 
-.container{
-    max-width:800px;
-    margin:auto;
-}
+        .nav-tabs {
+            display: flex; justify-content: center; gap: 10px; margin-bottom: 30px;
+            background: var(--bg-card); padding: 6px; border-radius: 99px; border: 1px solid var(--border);
+        }
+        .nav-tab {
+            padding: 10px 24px; border-radius: 99px; border: none; background: transparent;
+            color: var(--text-sub); cursor: pointer; font-weight: 600; transition: all 0.3s;
+        }
+        .nav-tab.active { background: var(--accent); color: #fff; box-shadow: var(--glow); }
 
-.card{
-    background:white;
-    padding:20px;
-    border-radius:10px;
-    margin-bottom:20px;
-    box-shadow:0 2px 8px rgba(0,0,0,.1);
-}
+        .view { display: none; animation: fadeIn 0.4s ease; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-h1{
-    margin-bottom:20px;
-}
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+            box-shadow: var(--shadow); transition: border-color 0.3s;
+        }
+        .card:hover { border-color: rgba(108,99,255,0.4); }
+        .card-title { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 600; margin-bottom: 20px; }
+        
+        .icon {
+            width: 32px; height: 32px; border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+        }
+        .icon-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .icon-purple { background: rgba(108,99,255,0.2); color: var(--accent2); }
+        .icon-green { background: rgba(52,211,153,0.15); color: var(--green); }
+        .icon-gold { background: rgba(245,200,66,0.15); color: var(--gold); }
 
-input{
-    width:100%;
-    padding:10px;
-    margin-top:8px;
-    margin-bottom:12px;
-    border:1px solid #ccc;
-    border-radius:6px;
-    box-sizing:border-box;
-}
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 0.8rem; font-weight: 500; color: var(--text-sub); }
+        label span.req { color: var(--red); margin-left: 4px; }
 
-button{
-    padding:10px 16px;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-    margin-right:8px;
-}
+        input, select {
+            background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            color: var(--text-main); font-size: 0.95rem; padding: 12px 14px; outline: none; width: 100%;
+            transition: all 0.2s;
+        }
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,0.2); }
 
-.btn-primary{
-    background:#000;
-    color:#fff;
-}
+        .toggle-group { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-input); }
+        .toggle-btn {
+            flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-sub);
+            cursor: pointer; font-size: 0.82rem; transition: all 0.2s;
+        }
+        .toggle-btn.active { background: var(--accent); color: #fff; }
 
-.btn-danger{
-    background:#d32f2f;
-    color:white;
-}
+        .info-box {
+            background: rgba(108,99,255,0.08); border: 1px solid rgba(108,99,255,0.25);
+            border-radius: var(--radius-sm); padding: 12px 16px; font-size: 0.82rem;
+            color: var(--text-sub); margin-top: 12px;
+        }
 
-.result{
-    background:#000;
-    color:#fff;
-    padding:15px;
-    border-radius:8px;
-    margin-top:15px;
-}
+        .calc-btn {
+            width: 100%; padding: 16px; border: none; border-radius: var(--radius);
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: #fff; font-size: 1.1rem; font-weight: 600; cursor: pointer;
+            box-shadow: var(--glow); transition: all 0.2s; margin-top: 10px;
+        }
 
-.history-item{
-    border:1px solid #ddd;
-    border-radius:8px;
-    padding:10px;
-    margin-bottom:10px;
-}
+        .final-charge {
+            background: linear-gradient(135deg, rgba(108,99,255,0.15), rgba(167,139,250,0.1));
+            border: 1px solid rgba(108,99,255,0.4); border-radius: var(--radius);
+            padding: 30px; text-align: center; margin-bottom: 20px;
+        }
+        .final-charge .amount { font-size: 2.8rem; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        
+        .detail-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
+        .detail-table th { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); color: var(--text-sub); }
+        .detail-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .detail-table td:last-child { text-align: right; font-weight: 600; }
 
-.price{
-    font-size:18px;
-    font-weight:bold;
-}
+        .history-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 20px; margin-bottom: 15px;
+        }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .history-user { font-weight: 700; color: var(--accent2); }
 
-</style>
+        .msg-box {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 99px; background: var(--bg-card);
+            border: 1px solid var(--accent); z-index: 1000; display: none; color: #fff;
+        }
+
+        @media (max-width: 600px) { .wrapper { padding: 0 15px 40px; } }
+    </style>
 </head>
-
 <body>
 
-<div class="container">
+<div id="toast" class="msg-box"></div>
 
-<h1>AgentPro</h1>
+<div class="wrapper">
+    <header>
+        <div class="header-badge">Item Pricing Pro</div>
+        <h1>單一品項精準報價</h1>
+    </header>
 
-<div class="card">
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchView('calc')">🧮 費用計算</button>
+        <button class="nav-tab" onclick="switchView('history')">📜 歷史紀錄</button>
+    </div>
 
-<label>商品名稱</label>
-<input id="itemName" type="text">
+    <div id="view-calc" class="view active">
+        <!-- ① 匯率基準 (單據 A) -->
+        <div class="card">
+            <div class="card-title"><div class="icon icon-purple">📑</div>① 鎖定整單匯率 (Receipt A)</div>
+            <div class="form-group" style="margin-bottom:15px">
+                <label>付款方式</label>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="btn-card" onclick="setPayment('card')">💳 信用卡刷卡</button>
+                    <button class="toggle-btn" id="btn-cash" onclick="setPayment('cash')">💵 現金付款</button>
+                </div>
+            </div>
+            
+            <div id="mode-card" class="collapsible open">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>整單收據外幣總額 (A)</label>
+                        <input type="number" id="receipt-foreign" placeholder="如：20000" oninput="autoCalcRate()">
+                    </div>
+                    <div class="form-group">
+                        <label>幣別</label>
+                        <select id="currency-select">
+                            <option value="JPY">日圓 JPY</option>
+                            <option value="KRW">韓元 KRW</option>
+                            <option value="USD">美元 USD</option>
+                            <option value="EUR">歐元 EUR</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>整單台幣扣款 (不含手續費)</label>
+                        <input type="number" id="receipt-twd" placeholder="如：4000" oninput="autoCalcRate()">
+                    </div>
+                </div>
+                <div id="rate-display" class="info-box" style="display:none">
+                    🔍 <b>目前匯率基準：</b><span id="rate-text"></span>
+                </div>
+            </div>
 
-<label>商品價格</label>
-<input id="itemPrice" type="number">
+            <div id="mode-cash" class="collapsible">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>換匯外幣金額</label>
+                        <input type="number" id="cash-foreign" placeholder="如：10000">
+                    </div>
+                    <div class="form-group">
+                        <label>實際換匯台幣</label>
+                        <input type="number" id="cash-twd" placeholder="如：2200">
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<label>數量</label>
-<input id="itemQty" type="number" value="1">
+        <!-- ② 品項資訊 (商品 B) -->
+        <div class="card">
+            <div class="card-title"><div class="icon icon-blue">🏷️</div>② 輸入商品資訊 (Item B)</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>購買人</label>
+                    <input type="text" id="buyer-name" placeholder="林小姐">
+                </div>
+                <div class="form-group">
+                    <label>品項名稱</label>
+                    <input type="text" id="item-name" placeholder="日系襯衫">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>商品外幣單價</label>
+                    <input type="number" id="item-price-foreign" placeholder="如：1000">
+                </div>
+                <div class="form-group">
+                    <label>數量</label>
+                    <input type="number" id="item-qty" value="1">
+                </div>
+            </div>
+        </div>
 
-<button class="btn-primary" onclick="calculate()">
-計算
-</button>
+        <!-- ③ 退稅與額外費用 -->
+        <div class="card">
+            <div class="card-title"><div class="icon icon-green">🌍</div>③ 退稅與其他費用</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>購買國家 (自動帶入稅率)</label>
+                    <select id="country-select" onchange="onCountryChange()">
+                        <option value="">-- 請選擇 --</option>
+                        <option value="JP_G">🇯🇵 日本 (一般 10%)</option>
+                        <option value="JP_C">🇯🇵 日本 (消耗品 8%)</option>
+                        <option value="KR">🇰🇷 韓國 (10%)</option>
+                        <option value="EU">🇪🇺 歐盟 (12%)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>政府退稅率 (%)</label>
+                    <input type="number" id="tax-rate" value="0">
+                </div>
+            </div>
 
-<div id="resultArea"></div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>退稅類型</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="tax-post" onclick="setTaxType('posttax')">稅後退稅 (需從總額扣除)</button>
+                        <button class="toggle-btn" id="tax-pre" onclick="setTaxType('pretax')">稅前免稅 (現場已扣除)</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>店家額外折扣 (%)</label>
+                    <input type="number" id="store-discount" value="0" placeholder="如：5% 折扣券">
+                </div>
+            </div>
+            
+            <div id="tax-hint" class="info-box">
+                💡 <b>稅後退稅：</b>代表收據金額為「含稅價」，計算後需扣回退稅台幣。
+            </div>
 
-</div>
+            <div class="form-row" style="margin-top: 16px;">
+                <div class="form-group">
+                    <label>代購服務費 (台幣)</label>
+                    <input type="number" id="service-fee" value="0">
+                </div>
+                <div class="form-group">
+                    <label>運費 (台幣)</label>
+                    <input type="number" id="shipping-fee" value="0">
+                </div>
+            </div>
+        </div>
 
-<div class="card">
+        <button class="calc-btn" onclick="calculate()">🧮 計算該商品應收金額</button>
 
-<h2>計算歷史</h2>
+        <div id="result-panel" style="display:none; margin-top:30px;">
+            <div class="card">
+                <div class="card-title"><div class="icon icon-purple">📊</div>報價明細表</div>
+                <table class="detail-table">
+                    <thead>
+                        <tr><th>項目</th><th>計算說明</th><th>台幣金額</th></tr>
+                    </thead>
+                    <tbody id="detail-list"></tbody>
+                </table>
+                <div class="final-charge">
+                    <div style="font-size:0.9rem; color:var(--text-sub);">該商品應收總計</div>
+                    <div class="amount" id="res-total">NT$ 0</div>
+                </div>
+                <button class="calc-btn" style="background:transparent; border:1px solid var(--accent); color:var(--accent2);" onclick="saveRecord()">💾 儲存紀錄</button>
+            </div>
+        </div>
+    </div>
 
-<button class="btn-danger" onclick="clearHistory()">
-清空全部
-</button>
-
-<div id="historyList"></div>
-
-</div>
-
+    <div id="view-history" class="view">
+        <div id="history-list" class="history-list"></div>
+    </div>
 </div>
 
 <script>
+    let paymentMode = 'card';
+    let taxType = 'posttax';
+    let lastCalc = null;
 
-let historyData =
-JSON.parse(
-localStorage.getItem("agentpro_history")
-) || [];
+    function setPayment(mode) {
+        paymentMode = mode;
+        document.getElementById('btn-card').classList.toggle('active', mode === 'card');
+        document.getElementById('btn-cash').classList.toggle('active', mode === 'cash');
+        document.getElementById('mode-card').classList.toggle('open', mode === 'card');
+        document.getElementById('mode-cash').classList.toggle('open', mode === 'cash');
+    }
 
-function saveHistory() {
+    function setTaxType(type) {
+        taxType = type;
+        document.getElementById('tax-post').classList.toggle('active', type === 'posttax');
+        document.getElementById('tax-pre').classList.toggle('active', type === 'pretax');
+        const hint = document.getElementById('tax-hint');
+        if (type === 'posttax') {
+            hint.innerHTML = '💡 <b>稅後退稅：</b>代表收據金額為「含稅價」，計算後需扣回退稅台幣。';
+        } else {
+            hint.innerHTML = '💡 <b>稅前免稅：</b>代表現場已是免稅價支付，報價不會再扣除退稅。';
+        }
+    }
 
-localStorage.setItem(
-"agentpro_history",
-JSON.stringify(historyData)
-);
+    function switchView(view) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(`view-${view}`).classList.add('active');
+        if (view === 'history') loadHistory();
+    }
 
-}
+    function autoCalcRate() {
+        const f = parseFloat(document.getElementById('receipt-foreign').value);
+        const t = parseFloat(document.getElementById('receipt-twd').value);
+        const box = document.getElementById('rate-display');
+        if (f > 0 && t > 0) {
+            const rate = t / f;
+            document.getElementById('rate-text').textContent = `1 外幣 = ${rate.toFixed(5)} TWD`;
+            box.style.display = 'block';
+        } else { box.style.display = 'none'; }
+    }
 
-function calculate(){
+    function onCountryChange() {
+        const val = document.getElementById('country-select').value;
+        let rate = 0;
+        let defaultType = 'posttax';
+        
+        if (val === 'JP_G') { rate = 10; defaultType = 'pretax'; }
+        else if (val === 'JP_C') { rate = 8; defaultType = 'pretax'; }
+        else if (val === 'KR') { rate = 10; defaultType = 'posttax'; }
+        else if (val === 'EU') { rate = 12; defaultType = 'posttax'; }
+        
+        document.getElementById('tax-rate').value = rate;
+        setTaxType(defaultType);
+    }
 
-const itemName =
-document.getElementById("itemName").value;
+    function calculate() {
+        // 1. 取得匯率
+        let rate = 0;
+        if (paymentMode === 'card') {
+            const rf = parseFloat(document.getElementById('receipt-foreign').value) || 0;
+            const rt = parseFloat(document.getElementById('receipt-twd').value) || 0;
+            if (rf <= 0 || rt <= 0) return alert('請填寫整單外幣總額與台幣扣款');
+            rate = rt / rf;
+        } else {
+            const cf = parseFloat(document.getElementById('cash-foreign').value) || 0;
+            const ct = parseFloat(document.getElementById('cash-twd').value) || 0;
+            if (cf <= 0 || ct <= 0) return alert('請填寫現金換匯資訊');
+            rate = ct / cf;
+        }
 
-const itemPrice =
-parseFloat(
-document.getElementById("itemPrice").value
-) || 0;
+        // 2. 品項計算
+        const itemForeign = parseFloat(document.getElementById('item-price-foreign').value) || 0;
+        const itemQty = parseFloat(document.getElementById('item-qty').value) || 1;
+        const buyer = document.getElementById('buyer-name').value || '未命名';
+        const itemName = document.getElementById('item-name').value || '商品';
+        
+        const itemTwdBase = itemForeign * itemQty * rate;
+        
+        // 3. 額外費用與折扣
+        const isCC = paymentMode === 'card';
+        const ccFee = isCC ? Math.round(itemTwdBase * 0.015) : 0;
+        
+        const govTaxRate = (parseFloat(document.getElementById('tax-rate').value) || 0) / 100;
+        const govRefundTwd = (taxType === 'posttax') ? Math.round(itemTwdBase * govTaxRate) : 0;
 
-const qty =
-parseInt(
-document.getElementById("itemQty").value
-) || 1;
+        const storeDiscRate = (parseFloat(document.getElementById('store-discount').value) || 0) / 100;
+        const storeRefundTwd = Math.round(itemTwdBase * storeDiscRate);
+        
+        const svc = parseFloat(document.getElementById('service-fee').value) || 0;
+        const ship = parseFloat(document.getElementById('shipping-fee').value) || 0;
+        
+        const total = Math.round(itemTwdBase + ccFee - govRefundTwd - storeRefundTwd + svc + ship);
 
-const total =
-itemPrice * qty;
+        // 4. 渲染
+        const list = document.getElementById('detail-list');
+        list.innerHTML = '';
+        const add = (n, c, v, cl='') => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${n}</td><td style="color:var(--text-muted); font-size:0.8rem;">${c}</td><td class="${cl}">NT$ ${Math.round(v).toLocaleString()}</td>`;
+            list.appendChild(tr);
+        };
 
-const record = {
+        add('品項台幣基準', `${itemForeign} × ${itemQty} × 匯率 ${rate.toFixed(4)}`, itemTwdBase);
+        if(isCC) add('刷卡手續費', '台幣基準 × 1.5%', ccFee, 'red');
+        if(govRefundTwd > 0) add('政府退稅', `台幣基準 × ${govTaxRate*100}%`, -govRefundTwd, 'green');
+        if(storeRefundTwd > 0) add('店家折扣/退稅', `台幣基準 × ${storeDiscRate*100}%`, -storeRefundTwd, 'green');
+        if(svc > 0) add('代購服務費', '固定費用', svc, 'accent');
+        if(ship > 0) add('國內/外運費', '物流成本', ship, 'accent');
 
-id: Date.now(),
+        document.getElementById('res-total').textContent = `NT$ ${total.toLocaleString()}`;
+        document.getElementById('result-panel').style.display = 'block';
+        window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
 
-item: itemName,
+        lastCalc = { buyer, itemName, total, date: new Date().toLocaleString() };
+    }
 
-price: itemPrice,
+    function saveRecord() {
+        if (!lastCalc) return;
+        const history = JSON.parse(localStorage.getItem('agent_records') || '[]');
+        history.unshift(lastCalc);
+        localStorage.setItem('agent_records', JSON.stringify(history));
+        const t = document.getElementById('toast');
+        t.textContent = '✅ 已儲存至歷史紀錄';
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2000);
+    }
 
-qty: qty,
-
-total: total,
-
-date: new Date().toLocaleString()
-
-};
-
-historyData.unshift(record);
-
-saveHistory();
-
-document.getElementById("resultArea").innerHTML =
-
-`
-<div class="result">
-
-<h3>${itemName}</h3>
-
-<p>單價：${itemPrice.toLocaleString()}</p>
-
-<p>數量：${qty}</p>
-
-<p class="price">
-總價 NT$ ${total.toLocaleString()}
-</p>
-
-</div>
-`;
-
-renderHistory();
-
-}
-
-function renderHistory(){
-
-const list =
-document.getElementById("historyList");
-
-if(historyData.length===0){
-
-list.innerHTML="<p>尚無資料</p>";
-
-return;
-}
-
-list.innerHTML =
-historyData.map(item =>
-
-`
-<div class="history-item">
-
-<div>
-<strong>${item.item}</strong>
-</div>
-
-<div>
-單價：${item.price.toLocaleString()}
-</div>
-
-<div>
-數量：${item.qty}
-</div>
-
-<div class="price">
-NT$ ${item.total.toLocaleString()}
-</div>
-
-<div>
-${item.date}
-</div>
-
-<br>
-
-<button
-class="btn-danger"
-onclick="deleteRecord(${item.id})"
->
-刪除
-</button>
-
-</div>
-`
-).join("");
-
-}
-
-function deleteRecord(id){
-
-historyData =
-historyData.filter(
-item => item.id !== id
-);
-
-saveHistory();
-
-renderHistory();
-
-}
-
-function clearHistory(){
-
-if(confirm("確定清空所有紀錄？")){
-
-historyData = [];
-
-saveHistory();
-
-renderHistory();
-
-}
-
-}
-
-renderHistory();
-
+    function loadHistory() {
+        const history = JSON.parse(localStorage.getItem('agent_records') || '[]');
+        const container = document.getElementById('history-list');
+        if (history.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">尚無紀錄</div>';
+            return;
+        }
+        container.innerHTML = history.map((h, i) => `
+            <div class="history-card">
+                <div class="history-header">
+                    <span class="history-user">${h.buyer}</span>
+                    <span style="font-size:0.8rem; color:var(--text-muted);">${h.date}</span>
+                </div>
+                <div>品項：${h.itemName}</div>
+                <div style="font-size:1.2rem; font-weight:800; color:var(--accent2); margin-top:5px;">NT$ ${h.total.toLocaleString()}</div>
+            </div>
+        `).join('');
+    }
 </script>
-
 </body>
 </html>
