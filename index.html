@@ -1,213 +1,284 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AgentPro</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- React -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<title>AgentPro</title>
 
-  <!-- Babel (讓瀏覽器支援 JSX) -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
 
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+body{
+    font-family: "Microsoft JhengHei", sans-serif;
+    background:#f5f5f5;
+    padding:20px;
+}
 
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+.container{
+    max-width:800px;
+    margin:auto;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+
+h1{
+    margin-bottom:20px;
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin-top:8px;
+    margin-bottom:12px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    box-sizing:border-box;
+}
+
+button{
+    padding:10px 16px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    margin-right:8px;
+}
+
+.btn-primary{
+    background:#000;
+    color:#fff;
+}
+
+.btn-danger{
+    background:#d32f2f;
+    color:white;
+}
+
+.result{
+    background:#000;
+    color:#fff;
+    padding:15px;
+    border-radius:8px;
+    margin-top:15px;
+}
+
+.history-item{
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:10px;
+    margin-bottom:10px;
+}
+
+.price{
+    font-size:18px;
+    font-weight:bold;
+}
+
+</style>
 </head>
 
 <body>
-<div id="root"></div>
 
-<script type="text/babel">
+<div class="container">
 
-const { useState, useEffect, useRef } = React;
-const {
-  CreditCard, Banknote, User, ShoppingBag, Globe, Receipt,
-  Truck, FileCheck, Save, Trash2, Calculator, TrendingUp,
-  Store, DollarSign, Copy, Image
-} = lucide;
+<h1>AgentPro</h1>
 
-function App() {
-  const [activeTab, setActiveTab] = useState('calc');
-  const [history, setHistory] = useState([]);
+<div class="card">
 
-  const receiptRef = useRef(null);
-  const [isCopying, setIsCopying] = useState(false);
+<label>商品名稱</label>
+<input id="itemName" type="text">
 
-  const [paymentMethod, setPaymentMethod] = useState('card');
-  const [currency, setCurrency] = useState('JPY');
-  const [receiptForeign, setReceiptForeign] = useState('');
-  const [receiptTwd, setReceiptTwd] = useState('');
-  const [cashForeign, setCashForeign] = useState('');
-  const [cashTwd, setCashTwd] = useState('');
+<label>商品價格</label>
+<input id="itemPrice" type="number">
 
-  const [buyerName, setBuyerName] = useState('');
-  const [itemName, setItemName] = useState('');
-  const [itemForeignPrice, setItemForeignPrice] = useState('');
-  const [itemQty, setItemQty] = useState(1);
+<label>數量</label>
+<input id="itemQty" type="number" value="1">
 
-  const [country, setCountry] = useState('JP_10');
-  const [taxRate, setTaxRate] = useState(10);
-  const [taxType, setTaxType] = useState('pretax');
-  const [storeDiscount, setStoreDiscount] = useState('');
+<button class="btn-primary" onclick="calculate()">
+計算
+</button>
 
-  const [shippingFee, setShippingFee] = useState('');
-  const [serviceFeeType, setServiceFeeType] = useState('fixed');
-  const [serviceFeeValue, setServiceFeeValue] = useState(150);
-  const [platformFeeRate, setPlatformFeeRate] = useState(0);
+<div id="resultArea"></div>
 
-  const [result, setResult] = useState(null);
+</div>
 
-  useEffect(() => {
-    const saved = localStorage.getItem('agent_pro_advanced_records');
-    if (saved) setHistory(JSON.parse(saved));
+<div class="card">
 
-    if (!window.html2canvas) {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-      document.head.appendChild(script);
-    }
-  }, []);
+<h2>計算歷史</h2>
 
-  const getActualCostRate = () => {
-    if (paymentMethod === 'card') {
-      const rf = parseFloat(receiptForeign);
-      const rt = parseFloat(receiptTwd);
-      return (rf > 0 && rt > 0) ? (rt / rf) : 0;
-    } else {
-      const cf = parseFloat(cashForeign);
-      const ct = parseFloat(cashTwd);
-      return (cf > 0 && ct > 0) ? (ct / cf) : 0;
-    }
-  };
+<button class="btn-danger" onclick="clearHistory()">
+清空全部
+</button>
 
-  const calculate = () => {
-    const actualRate = getActualCostRate();
-    if (actualRate <= 0) return alert('請先填寫匯率');
+<div id="historyList"></div>
 
-    const price = parseFloat(itemForeignPrice) || 0;
-    const qty = parseInt(itemQty) || 1;
+</div>
 
-    const sFee = parseFloat(shippingFee) || 0;
+</div>
 
-    const baseItemTwd = price * qty * actualRate;
-    const creditCardFeeTwd = paymentMethod === 'card' ? baseItemTwd * 0.015 : 0;
+<script>
 
-    const tRate = (parseFloat(taxRate) || 0) / 100;
-    const govRefundTwd = (taxType === 'posttax') ? baseItemTwd * tRate : 0;
+let historyData =
+JSON.parse(
+localStorage.getItem("agentpro_history")
+) || [];
 
-    const dRate = (parseFloat(storeDiscount) || 0) / 100;
-    const storeRefundTwd = baseItemTwd * dRate;
+function saveHistory() {
 
-    const serviceFeeTwd = serviceFeeType === 'fixed'
-      ? (parseFloat(serviceFeeValue) || 0)
-      : baseItemTwd * ((parseFloat(serviceFeeValue) || 0) / 100);
+localStorage.setItem(
+"agentpro_history",
+JSON.stringify(historyData)
+);
 
-    const subTotal = baseItemTwd + creditCardFeeTwd - govRefundTwd - storeRefundTwd + sFee + serviceFeeTwd;
-    const platformFeeTwd = subTotal * ((parseFloat(platformFeeRate) || 0) / 100);
-
-    const finalChargeTwd = subTotal + platformFeeTwd;
-
-    setResult({
-      id: Date.now(),
-      date: new Date().toLocaleString(),
-      buyer: buyerName,
-      item: itemName,
-      currency,
-      actualRate,
-      price,
-      qty,
-      baseItemTwd,
-      ccFee: creditCardFeeTwd,
-      govRefund: govRefundTwd,
-      storeRefund: storeRefundTwd,
-      shipping: sFee,
-      svc: serviceFeeTwd,
-      platform: platformFeeTwd,
-      finalCharge: finalChargeTwd
-    });
-  };
-
-  const saveRecord = () => {
-    if (!result) return;
-    const newHistory = [result, ...history];
-    setHistory(newHistory);
-    localStorage.setItem('agent_pro_advanced_records', JSON.stringify(newHistory));
-    alert('已儲存');
-  };
-
-  const deleteRecord = (id) => {
-    const newHistory = history.filter(h => h.id !== id);
-    setHistory(newHistory);
-    localStorage.setItem('agent_pro_advanced_records', JSON.stringify(newHistory));
-  };
-
-  const copyToImage = async () => {
-    const canvas = await window.html2canvas(receiptRef.current, { scale: 2 });
-    canvas.toBlob(async (blob) => {
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob })
-      ]);
-      alert('已複製圖片');
-    });
-  };
-
-  const formatMoney = (n) => Math.round(n).toLocaleString();
-
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">AgentPro</h1>
-
-      <button onClick={() => setActiveTab('calc')}>計算</button>
-      <button onClick={() => setActiveTab('history')}>歷史</button>
-
-      {activeTab === 'calc' && (
-        <div className="space-y-4">
-
-          <input placeholder="商品名稱" value={itemName} onChange={e=>setItemName(e.target.value)} />
-          <input placeholder="價格" value={itemForeignPrice} onChange={e=>setItemForeignPrice(e.target.value)} />
-
-          <button onClick={calculate} className="bg-black text-white p-2">
-            計算
-          </button>
-
-          {result && (
-            <div ref={receiptRef} className="bg-black text-white p-4 mt-4">
-              <p>{result.item}</p>
-              <p>總價 NT$ {formatMoney(result.finalCharge)}</p>
-            </div>
-          )}
-
-          {result && (
-            <div className="flex gap-2">
-              <button onClick={copyToImage}>複製圖片</button>
-              <button onClick={saveRecord}>儲存</button>
-            </div>
-          )}
-
-        </div>
-      )}
-
-      {activeTab === 'history' && (
-        <div>
-          {history.map(h => (
-            <div key={h.id} className="border p-2 mb-2">
-              <p>{h.item}</p>
-              <p>{formatMoney(h.finalCharge)}</p>
-              <button onClick={() => deleteRecord(h.id)}>刪除</button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+function calculate(){
+
+const itemName =
+document.getElementById("itemName").value;
+
+const itemPrice =
+parseFloat(
+document.getElementById("itemPrice").value
+) || 0;
+
+const qty =
+parseInt(
+document.getElementById("itemQty").value
+) || 1;
+
+const total =
+itemPrice * qty;
+
+const record = {
+
+id: Date.now(),
+
+item: itemName,
+
+price: itemPrice,
+
+qty: qty,
+
+total: total,
+
+date: new Date().toLocaleString()
+
+};
+
+historyData.unshift(record);
+
+saveHistory();
+
+document.getElementById("resultArea").innerHTML =
+
+`
+<div class="result">
+
+<h3>${itemName}</h3>
+
+<p>單價：${itemPrice.toLocaleString()}</p>
+
+<p>數量：${qty}</p>
+
+<p class="price">
+總價 NT$ ${total.toLocaleString()}
+</p>
+
+</div>
+`;
+
+renderHistory();
+
+}
+
+function renderHistory(){
+
+const list =
+document.getElementById("historyList");
+
+if(historyData.length===0){
+
+list.innerHTML="<p>尚無資料</p>";
+
+return;
+}
+
+list.innerHTML =
+historyData.map(item =>
+
+`
+<div class="history-item">
+
+<div>
+<strong>${item.item}</strong>
+</div>
+
+<div>
+單價：${item.price.toLocaleString()}
+</div>
+
+<div>
+數量：${item.qty}
+</div>
+
+<div class="price">
+NT$ ${item.total.toLocaleString()}
+</div>
+
+<div>
+${item.date}
+</div>
+
+<br>
+
+<button
+class="btn-danger"
+onclick="deleteRecord(${item.id})"
+>
+刪除
+</button>
+
+</div>
+`
+).join("");
+
+}
+
+function deleteRecord(id){
+
+historyData =
+historyData.filter(
+item => item.id !== id
+);
+
+saveHistory();
+
+renderHistory();
+
+}
+
+function clearHistory(){
+
+if(confirm("確定清空所有紀錄？")){
+
+historyData = [];
+
+saveHistory();
+
+renderHistory();
+
+}
+
+}
+
+renderHistory();
+
 </script>
 
 </body>
