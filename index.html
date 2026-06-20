@@ -37,14 +37,21 @@ body{margin:0;background:linear-gradient(135deg,#081120,#0b1730);color:var(--tex
 label{display:block;color:#cbd5e1;margin-bottom:8px; font-size: 0.9rem;}
 input,select,button{width:100%;padding:12px 16px;border-radius:10px;border:1px solid var(--border);background:#0b1220;color:white; font-size: 1rem; transition: border 0.2s;}
 input:focus, select:focus { border-color: var(--gold); outline: none;}
+input:read-only { background-color: #1a2333; color: var(--muted); cursor: not-allowed; }
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 
 /* 按鈕樣式 */
 button{background:var(--gold);color:#111;font-weight:700;cursor:pointer; border: none;}
 button:hover { filter: brightness(1.1); transform: translateY(-1px); }
-button.btn-outline { background: transparent; color: var(--gold); border: 1px solid var(--gold); }
+button.btn-outline { background: transparent; color: var(--gold); border: 1px dashed var(--gold); }
 button.btn-danger { background: rgba(248, 113, 113, 0.1); color: var(--red); border: 1px solid var(--red); }
 button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
+
+/* 動態新增明細的區塊樣式 */
+.item-row { background: #152238; border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; position: relative;}
+.item-row:focus-within { border-color: var(--gold); }
+.remove-btn { position: absolute; top: 12px; right: 12px; background: rgba(248, 113, 113, 0.1); color: var(--red); border: 1px solid var(--red); width: 32px; height: 32px; padding: 0; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; }
+.remove-btn:hover { background: var(--red); color: white; }
 
 /* 報價單/對帳單樣式 */
 .invoice{ background:#fff; color:#111827; padding:32px; border-radius:18px; position: relative;}
@@ -75,8 +82,13 @@ button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
 /* Toast */
 .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #111; padding: 12px 24px; border-radius: 8px; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 1000;}
 .toast.show { opacity: 1; }
-
 .empty-state { text-align: center; padding: 40px; color: var(--muted); }
+
+/* Modal 樣式 */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.modal-overlay.show { opacity: 1; pointer-events: auto; }
+.modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 24px; width: 90%; max-width: 500px; }
+.modal-title { font-size: 1.2rem; font-weight: 700; color: var(--gold); margin-bottom: 16px; margin-top: 0;}
 
 </style>
 </head>
@@ -84,10 +96,13 @@ button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
 
 <div id="toast" class="toast">訊息</div>
 
+<!-- Datalist 用於購買人下拉選單自動完成 -->
+<datalist id="buyerList"></datalist>
+
 <div class="container">
     
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('calc')">1. 計算與加入</button>
+        <button class="tab-btn active" onclick="switchTab('calc')">1. 計算與加入明細</button>
         <button class="tab-btn" onclick="switchTab('orders')">2. 客戶對帳單 (合併品項)</button>
     </div>
 
@@ -104,6 +119,7 @@ button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
                             <label>付款方式</label>
                             <select id="payMode">
                                 <option value="card">信用卡</option>
+                                <option value="mobile">行動支付 (LINE Pay等)</option>
                                 <option value="cash">現金</option>
                             </select>
                         </div>
@@ -122,6 +138,7 @@ button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
                         </div>
                     </div>
 
+                    <!-- 信用卡區塊 -->
                     <div id="cardBox" class="grid2" style="margin-top:16px">
                         <div>
                             <label>整單收據外幣總額</label>
@@ -133,6 +150,23 @@ button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
                         </div>
                     </div>
 
+                    <!-- 行動支付區塊 -->
+                    <div id="mobileBox" class="grid2" style="display:none;margin-top:16px">
+                        <div>
+                            <label>行動支付外幣總額</label>
+                            <input id="mobileForeign" type="number" placeholder="例: 10000">
+                        </div>
+                        <div>
+                            <label>行動支付台幣扣款</label>
+                            <input id="mobileTwd" type="number" placeholder="例: 2200">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label>行動支付手續費率 (%)</label>
+                            <input id="mobileFeeRate" type="number" step="0.1" value="0" placeholder="例: 1.5 (免手續費請填0)">
+                        </div>
+                    </div>
+
+                    <!-- 現金區塊 -->
                     <div id="cashBox" class="grid2" style="display:none;margin-top:16px">
                         <div>
                             <label>換匯外幣金額</label>
@@ -157,12 +191,13 @@ button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
                         <option value="none">無退稅 (不扣抵)</option>
                         <option value="posttax">稅後退稅（需從報價中扣除）</option>
                         <option value="pretax">稅前免稅（現場已免稅，不扣抵）</option>
+                        <option value="custom">其他自訂 (自行輸入退稅率)</option>
                     </select>
 
                     <div class="grid2" style="margin-top:16px">
                         <div>
                             <label>政府退稅率 (%)</label>
-                            <input id="taxRate" type="number" step="0.1">
+                            <input id="taxRate" type="number" step="0.1" readonly style="opacity: 0.5;">
                         </div>
                         <div>
                             <label>店家額外折扣 (%)</label>
@@ -172,40 +207,34 @@ button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
                 </div>
 
                 <div class="card">
-                    <div class="step">STEP 3｜商品資訊與費用</div>
-                    <div class="grid2">
-                        <div><label>購買人（客戶名稱）</label><input id="buyer" placeholder="例: 林小姐"></div>
-                        <div><label>商品名稱</label><input id="item" placeholder="例: Dior 短夾"></div>
-                    </div>
-                    <div class="grid2" style="margin-top:16px">
-                        <div><label>商品單價（外幣）</label><input id="price" type="number" placeholder="例: 85000"></div>
-                        <div><label>數量</label><input id="qty" type="number" value="1" min="1"></div>
-                    </div>
-                    <div class="grid2" style="margin-top:16px; border-top: 1px solid var(--border); padding-top: 16px;">
-                        <div><label>代購服務費 (台幣)</label><input id="serviceFee" type="number" value="0"></div>
-                        <div><label>運費 (台幣)</label><input id="shippingFee" type="number" value="0"></div>
-                    </div>
+                    <div class="step">STEP 3｜商品明細清單 (可同時輸入多筆)</div>
+                    
+                    <!-- 多筆明細容器 -->
+                    <div id="itemsContainer"></div>
+
+                    <button class="btn-outline" onclick="createItemRow()" style="margin-top: 16px; padding: 14px; font-size: 1.1rem;">
+                        ➕ 新增下一筆明細
+                    </button>
                 </div>
 
-                <button onclick="calculateSingle()" style="padding: 16px; font-size: 1.2rem;">預覽此商品報價</button>
+                <button onclick="calculatePreview()" style="padding: 18px; font-size: 1.3rem; margin-bottom: 20px;">
+                    預覽清單報價
+                </button>
             </div>
 
-            <!-- 右側：單一商品預覽與加入 -->
+            <!-- 右側：清單預覽與加入 -->
             <div>
                 <div class="card" style="position: sticky; top: 20px;">
-                    <div class="step">單一商品預覽</div>
+                    <div class="step">預覽準備加入的明細</div>
                     
-                    <div id="previewCard" class="invoice" style="min-height: 200px;">
-                        <div class="empty-state">請填寫左側資料並點擊「預覽此商品報價」</div>
+                    <div id="previewCard" class="invoice" style="min-height: 200px; padding: 24px;">
+                        <div class="empty-state">請填寫左側資料並點擊「預覽清單報價」</div>
                     </div>
 
                     <div id="actionButtons" style="display: none; margin-top: 20px;">
-                        <button onclick="addToOrder()" style="width: 100%; padding: 16px; font-size: 1.1rem;">
-                            ➕ 將此商品加入【<span id="btnBuyerName"></span>】的訂單
+                        <button onclick="addToOrder()" style="width: 100%; padding: 18px; font-size: 1.2rem;">
+                            ✅ 確認將所有明細派發至客戶訂單
                         </button>
-                        <p style="text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 10px;">
-                            加入後，可前往「客戶對帳單」合併結算
-                        </p>
                     </div>
                 </div>
             </div>
@@ -238,25 +267,75 @@ button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
                     </div>
 
                     <div id="orderActionButtons" class="grid2" style="display:none; margin-top: 20px;">
-                        <button class="btn-outline" onclick="copyTextOrder()">📋 複製文字明細</button>
-                        <button onclick="copyImageOrder()">📸 產生對帳圖片</button>
-                    </div>
+                    <button class="btn-outline" onclick="copyTextOrder()">📋 複製文字明細</button>
+                    <button onclick="copyImageOrder()">📸 產生對帳圖片</button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
+<!-- 編輯與確認彈窗 -->
+<div id="editModal" class="modal-overlay">
+    <div class="modal-card">
+        <h3 class="modal-title">編輯商品明細</h3>
+        <div class="grid2" style="margin-bottom: 12px;">
+            <div style="grid-column: span 2;">
+                <label>商品名稱</label>
+                <input id="editItemName" type="text">
+            </div>
+            <div>
+                <label>單價 (外幣)</label>
+                <input id="editItemPrice" type="number">
+            </div>
+            <div>
+                <label>數量</label>
+                <input id="editItemQty" type="number" min="1">
+            </div>
+            <div>
+                <label>代購服務費</label>
+                <input id="editItemSvc" type="number">
+            </div>
+            <div>
+                <label>運費</label>
+                <input id="editItemShip" type="number">
+            </div>
+        </div>
+        <div class="grid2" style="margin-top: 20px;">
+            <button class="btn-outline" onclick="closeModal('editModal')">取消</button>
+            <button onclick="saveEditItem()">儲存變更</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal-card">
+        <h3 class="modal-title">確認操作</h3>
+        <p id="confirmMessage" style="margin-bottom: 24px; line-height: 1.5; color: white;"></p>
+        <div class="grid2">
+            <button class="btn-outline" onclick="closeModal('confirmModal')">取消</button>
+            <button id="confirmBtn" class="btn-danger">確定</button>
+        </div>
+    </div>
+</div>
+
+<div id="alertModal" class="modal-overlay">
+    <div class="modal-card">
+        <h3 class="modal-title">提示</h3>
+        <p id="alertMessage" style="margin-bottom: 24px; line-height: 1.5; color: white;"></p>
+        <button onclick="closeModal('alertModal')">確定</button>
+    </div>
 </div>
 
 <script>
-// --- 資料庫模擬 (使用 localStorage) ---
-// 結構: { "林小姐": [ {商品1資料}, {商品2資料} ], "王先生": [...] }
+// --- 資料庫模擬與全域狀態 ---
 let orders = JSON.parse(localStorage.getItem('agent_orders')) || {};
-let currentPreviewItem = null;
+let currentPreviewItems = [];
 let currentSelectedCustomer = null;
 
 function saveOrders() {
     localStorage.setItem('agent_orders', JSON.stringify(orders));
+    renderBuyerDatalist(); // 更新下拉選單的客戶清單
 }
 
 function showToast(msg) {
@@ -264,6 +343,26 @@ function showToast(msg) {
     t.innerText = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// --- 自訂彈窗邏輯 ---
+function customAlert(msg) {
+    document.getElementById('alertMessage').innerText = msg;
+    document.getElementById('alertModal').classList.add('show');
+}
+
+function customConfirm(msg, onConfirm) {
+    document.getElementById('confirmMessage').innerText = msg;
+    const btn = document.getElementById('confirmBtn');
+    btn.onclick = () => {
+        closeModal('confirmModal');
+        onConfirm();
+    };
+    document.getElementById('confirmModal').classList.add('show');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
 }
 
 // --- Tab 切換邏輯 ---
@@ -278,15 +377,120 @@ function switchTab(tabId) {
     }
 }
 
-// --- DOM 元素綁定與事件監聽 ---
+// --- 更新購買人下拉選單 (Datalist) ---
+function renderBuyerDatalist() {
+    const datalist = document.getElementById('buyerList');
+    const allBuyers = Object.keys(orders);
+    datalist.innerHTML = allBuyers.map(name => `<option value="${name}"></option>`).join('');
+}
+
+
+// --- 動態新增商品明細邏輯 ---
+function createItemRow() {
+    const container = document.getElementById('itemsContainer');
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+        <button class="remove-btn" onclick="removeItemRow(this)" title="移除此明細">✖</button>
+        <div class="grid2">
+            <div>
+                <label>購買人 (下拉選擇或輸入新名字)</label>
+                <input class="item-buyer" list="buyerList" placeholder="例: 林小姐">
+            </div>
+            <div>
+                <label>商品名稱</label>
+                <input class="item-name" placeholder="例: Dior 短夾">
+            </div>
+        </div>
+        <div class="grid2" style="margin-top:16px">
+            <div>
+                <label>商品單價（外幣）</label>
+                <input class="item-price" type="number" placeholder="例: 85000">
+            </div>
+            <div>
+                <label>數量</label>
+                <input class="item-qty" type="number" value="1" min="1">
+            </div>
+        </div>
+        <div class="grid2" style="margin-top:16px; border-top: 1px solid var(--border); padding-top: 16px;">
+            <div>
+                <label>代購服務費 (台幣)</label>
+                <input class="item-svc" type="number" value="0">
+            </div>
+            <div>
+                <label>運費 (台幣)</label>
+                <input class="item-ship" type="number" value="0">
+            </div>
+        </div>
+    `;
+    container.appendChild(row);
+    updateRemoveButtons();
+}
+
+function removeItemRow(btn) {
+    btn.closest('.item-row').remove();
+    updateRemoveButtons();
+}
+
+function updateRemoveButtons() {
+    const rows = document.querySelectorAll('.item-row');
+    rows.forEach(row => {
+        const btn = row.querySelector('.remove-btn');
+        // 如果只有一列，隱藏移除按鈕
+        btn.style.display = rows.length === 1 ? 'none' : 'flex';
+    });
+}
+
+// 頁面載入時初始化
+renderBuyerDatalist();
+createItemRow();
+
+
+// --- 退稅與國家連動邏輯 ---
+const country = document.getElementById('country');
+const taxType = document.getElementById('taxType');
+const taxRate = document.getElementById('taxRate');
+
+function updateTaxUI() {
+    const type = taxType.value;
+    const defaultRate = parseFloat(country.value.split('|')[2]) || 0;
+
+    if (type === 'none') {
+        taxRate.value = 0;
+        taxRate.readOnly = true;
+        taxRate.style.opacity = '0.5';
+    } else if (type === 'custom') {
+        taxRate.readOnly = false;
+        taxRate.style.opacity = '1';
+    } else {
+        taxRate.value = defaultRate;
+        taxRate.readOnly = true;
+        taxRate.style.opacity = '0.5';
+    }
+}
+
+country.onchange = () => {
+    const rate = country.value.split('|')[2];
+    if (rate == 0) {
+        taxType.value = 'none';
+    } else {
+        taxType.value = country.value.includes('日本') ? 'pretax' : 'posttax';
+    }
+    updateTaxUI();
+};
+taxType.onchange = updateTaxUI;
+country.onchange();
+
+
+// --- 匯率與付款方式邏輯 ---
 const payMode = document.getElementById('payMode');
 const foreignAmount = document.getElementById('foreignAmount');
 const twdAmount = document.getElementById('twdAmount');
+const mobileForeign = document.getElementById('mobileForeign');
+const mobileTwd = document.getElementById('mobileTwd');
 const cashForeign = document.getElementById('cashForeign');
 const cashTwd = document.getElementById('cashTwd');
 const rateText = document.getElementById('rateText');
-const country = document.getElementById('country');
-const taxRate = document.getElementById('taxRate');
 
 function updateRateUI(){
     const r = getRate();
@@ -295,116 +499,146 @@ function updateRateUI(){
 
 payMode.onchange = () => {
     document.getElementById('cardBox').style.display = payMode.value === 'card' ? 'grid' : 'none';
+    document.getElementById('mobileBox').style.display = payMode.value === 'mobile' ? 'grid' : 'none';
     document.getElementById('cashBox').style.display = payMode.value === 'cash' ? 'grid' : 'none';
     updateRateUI();
 };
 
-country.onchange = () => {
-    taxRate.value = country.value.split('|')[2];
-};
-country.onchange();
-
-// 監聽所有輸入框變動來更新匯率顯示
-[foreignAmount, twdAmount, cashForeign, cashTwd].forEach(el => {
-    el.addEventListener('input', updateRateUI);
+[foreignAmount, twdAmount, mobileForeign, mobileTwd, cashForeign, cashTwd].forEach(el => {
+    if(el) el.addEventListener('input', updateRateUI);
 });
 
-// --- 核心計算邏輯 ---
 function getRate(){
     if(payMode.value === 'card'){
         if(+foreignAmount.value && +twdAmount.value) return +twdAmount.value / +foreignAmount.value;
+    } else if (payMode.value === 'mobile') {
+        if(+mobileForeign.value && +mobileTwd.value) return +mobileTwd.value / +mobileForeign.value;
     } else {
         if(+cashForeign.value && +cashTwd.value) return +cashTwd.value / +cashForeign.value;
     }
     return 0;
 }
 
-// 單一商品計算與預覽
-function calculateSingle(){
-    const rate = getRate();
-    if(!rate){ alert('請先填寫匯率成本資料'); return; }
-    
-    const buyerName = document.getElementById('buyer').value.trim();
-    const itemName = document.getElementById('item').value.trim();
-    if(!buyerName || !itemName) { alert('請填寫購買人與商品名稱'); return; }
-    if(!document.getElementById('price').value) { alert('請填寫商品外幣單價'); return; }
 
-    const price = +document.getElementById('price').value || 0;
-    const qty = +document.getElementById('qty').value || 1;
-    const base = price * qty * rate;
+// --- 核心計算預覽邏輯 (處理多筆陣列) ---
+function calculatePreview(){
+    const rate = getRate();
+    if(!rate){ customAlert('請先填寫上方匯率成本資料'); return; }
     
-    const taxType = document.getElementById('taxType').value;
-    const taxValue = parseFloat(taxRate.value || 0);
-    
-    let gov = 0;
-    // 只有稅後退稅(posttax)才需要在報價中扣除
-    if(taxType === 'posttax'){
-        // 使用含稅價反推稅金 (假設收據是含稅的)
-        gov = Math.round(base * (taxValue / (100 + taxValue)));
+    const rows = document.querySelectorAll('.item-row');
+    currentPreviewItems = [];
+    let previewHtml = '';
+
+    for(let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const buyer = row.querySelector('.item-buyer').value.trim();
+        const itemName = row.querySelector('.item-name').value.trim();
+        const price = +row.querySelector('.item-price').value || 0;
+        const qty = +row.querySelector('.item-qty').value || 1;
+        const svc = +row.querySelector('.item-svc').value || 0;
+        const ship = +row.querySelector('.item-ship').value || 0;
+
+        if(!buyer) { customAlert(`第 ${i+1} 筆明細：請選擇或輸入購買人`); return; }
+        if(!itemName) { customAlert(`第 ${i+1} 筆明細：請填寫商品名稱`); return; }
+        if(price <= 0) { customAlert(`第 ${i+1} 筆明細：請填寫商品單價`); return; }
+
+        const base = price * qty * rate;
+        
+        // 退稅計算
+        const taxTypeValue = taxType.value;
+        const taxValue = parseFloat(taxRate.value || 0);
+        let gov = 0;
+        if(taxTypeValue === 'posttax'){
+            gov = Math.round(base * (taxValue / (100 + taxValue)));
+        } else if (taxTypeValue === 'custom') {
+            gov = Math.round(base * (taxValue / 100));
+        }
+
+        const storeDiscRateVal = (+document.getElementById('storeDiscount').value || 0);
+        const store = Math.round(base * (storeDiscRateVal / 100));
+        
+        // 手續費
+        let paymentFee = 0;
+        let paymentFeeLabel = '';
+        const payModeVal = payMode.value;
+        const mobileFeeRateVal = parseFloat(document.getElementById('mobileFeeRate').value || 0);
+
+        if (payModeVal === 'card') {
+            paymentFee = Math.round(base * 0.015);
+            paymentFeeLabel = '刷卡手續費 (1.5%)';
+        } else if (payModeVal === 'mobile') {
+            paymentFee = Math.round(base * (mobileFeeRateVal / 100));
+            paymentFeeLabel = mobileFeeRateVal > 0 ? `行動支付手續費 (${mobileFeeRateVal}%)` : '';
+        }
+        
+        const total = Math.round(base - gov - store + paymentFee + svc + ship);
+        const currency = country.value.split('|')[0];
+
+        currentPreviewItems.push({
+            id: Date.now().toString() + i,
+            buyer, itemName, price, qty, rate, base, gov, store, 
+            paymentFee, paymentFeeLabel, svc, ship, total,
+            currency: currency, 
+            taxRate: taxValue,
+            taxType: taxTypeValue,
+            storeDiscRate: storeDiscRateVal,
+            payModeValue: payModeVal,
+            mobileFeeRateValue: mobileFeeRateVal
+        });
+
+        // 堆疊預覽 HTML
+        previewHtml += `
+            <div class="invoice-item" style="padding: 16px;">
+                <div style="font-weight: 800; color: #b8862f; font-size: 1.1rem; margin-bottom: 8px;">👤 給：${buyer}</div>
+                <div class="invoice-item-name" style="border-bottom:none; padding-bottom:0; font-size: 1.1rem; margin-bottom: 12px;">商品名稱：${itemName} (x${qty})</div>
+                
+                <div style="border: 2px solid #94a3b8; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fff;">
+                    <div class="invoice-row"><span>當地金額</span><span style="font-weight:bold; color:#111;">${price.toLocaleString()} ${currency}</span></div>
+                    <div class="invoice-row"><span>台幣換算金額</span><span style="font-weight:bold; color:#111;">NT$ ${Math.round(base).toLocaleString()}</span></div>
+                    <div class="invoice-row" style="margin-bottom:0;"><span>換算匯率</span><span style="font-weight:bold; color:#111;">${rate.toFixed(5)}</span></div>
+                </div>
+
+                ${paymentFee > 0 ? `<div class="invoice-row plus"><span>${paymentFeeLabel}</span><span>+ NT$ ${paymentFee.toLocaleString()}</span></div>` : ''}
+                ${gov > 0 ? `<div class="invoice-row minus"><span>退稅 ${taxValue}%</span><span>- NT$ ${gov.toLocaleString()}</span></div>` : ''}
+                ${store > 0 ? `<div class="invoice-row minus"><span>店家折扣</span><span>- NT$ ${store.toLocaleString()}</span></div>` : ''}
+                ${svc > 0 ? `<div class="invoice-row plus"><span>代購服務費</span><span>+ NT$ ${svc.toLocaleString()}</span></div>` : ''}
+                ${ship > 0 ? `<div class="invoice-row plus"><span>運費</span><span>+ NT$ ${ship.toLocaleString()}</span></div>` : ''}
+                <div style="text-align:right; font-weight:800; font-size:1.2rem; color:#111; margin-top:12px; border-top: 2px dashed #e5e7eb; padding-top: 12px;">商品小計: NT$ ${total.toLocaleString()}</div>
+            </div>
+        `;
     }
 
-    const store = Math.round(base * ((+document.getElementById('storeDiscount').value || 0) / 100));
-    const cc = payMode.value === 'card' ? Math.round(base * 0.015) : 0;
-    
-    const svc = +document.getElementById('serviceFee').value || 0;
-    const ship = +document.getElementById('shippingFee').value || 0;
-
-    const total = Math.round(base - gov - store + cc + svc + ship);
-
-    // 儲存當前預覽的物件
-    currentPreviewItem = {
-        id: Date.now().toString(),
-        itemName, price, qty, rate, base, gov, store, cc, svc, ship, total,
-        currency: country.value.split('|')[0]
-    };
-
-    // 渲染預覽畫面
     document.getElementById('previewCard').innerHTML = `
-        <div class="invoice-header">
-            <h3 class="invoice-title">單筆商品試算</h3>
-            <div class="invoice-date">購買人：${buyerName}</div>
+        <div class="invoice-header" style="padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 class="invoice-title">已準備 ${currentPreviewItems.length} 筆明細</h3>
         </div>
-        <div class="invoice-item" style="border:none; padding:0; background:transparent;">
-            <div class="invoice-item-name">${itemName} (x${qty})</div>
-            <div class="invoice-row"><span>台幣換算基準</span><span>NT$ ${Math.round(base).toLocaleString()}</span></div>
-            ${cc > 0 ? `<div class="invoice-row plus"><span>刷卡手續費 (1.5%)</span><span>+ NT$ ${cc.toLocaleString()}</span></div>` : ''}
-            ${gov > 0 ? `<div class="invoice-row minus"><span>政府退稅折抵</span><span>- NT$ ${gov.toLocaleString()}</span></div>` : ''}
-            ${store > 0 ? `<div class="invoice-row minus"><span>店家折扣折抵</span><span>- NT$ ${store.toLocaleString()}</span></div>` : ''}
-            ${svc > 0 ? `<div class="invoice-row plus"><span>代購服務費</span><span>+ NT$ ${svc.toLocaleString()}</span></div>` : ''}
-            ${ship > 0 ? `<div class="invoice-row plus"><span>運費</span><span>+ NT$ ${ship.toLocaleString()}</span></div>` : ''}
-        </div>
-        <div class="invoice-total-section">
-            <div class="total-row">
-                <span class="total-label">此品項小計</span>
-                <span class="total-amount">NT$ ${total.toLocaleString()}</span>
-            </div>
-        </div>
+        ${previewHtml}
     `;
 
-    document.getElementById('btnBuyerName').innerText = buyerName;
     document.getElementById('actionButtons').style.display = 'block';
 }
 
-// 加入訂單 (購物車概念)
+// 將陣列中的明細派發至訂單
 function addToOrder() {
-    if(!currentPreviewItem) return;
-    const buyerName = document.getElementById('buyer').value.trim();
+    if(currentPreviewItems.length === 0) return;
     
-    if(!orders[buyerName]) {
-        orders[buyerName] = [];
-    }
+    currentPreviewItems.forEach(item => {
+        if(!orders[item.buyer]) {
+            orders[item.buyer] = [];
+        }
+        orders[item.buyer].push(JSON.parse(JSON.stringify(item)));
+    });
     
-    orders[buyerName].push(currentPreviewItem);
     saveOrders();
+    showToast(`✅ 已將 ${currentPreviewItems.length} 筆明細成功派發至客戶訂單`);
     
-    showToast(`✅ 已加入 ${buyerName} 的訂單`);
+    // 清空輸入表單，保留一個空的
+    document.getElementById('itemsContainer').innerHTML = '';
+    createItemRow();
     
-    // 清空部分欄位方便連續輸入
-    document.getElementById('item').value = '';
-    document.getElementById('price').value = '';
-    document.getElementById('previewCard').innerHTML = '<div class="empty-state">商品已加入，請繼續輸入下一筆，或切換至對帳單查看</div>';
+    document.getElementById('previewCard').innerHTML = '<div class="empty-state">明細已全部派發！<br>您可以繼續新增下一批，或切換至對帳單查看。</div>';
     document.getElementById('actionButtons').style.display = 'none';
-    currentPreviewItem = null;
+    currentPreviewItems = [];
 }
 
 // --- 客戶與對帳單邏輯 ---
@@ -432,7 +666,7 @@ function renderCustomerList() {
 
 function selectCustomer(name) {
     currentSelectedCustomer = name;
-    renderCustomerList(); // 更新 active 狀態
+    renderCustomerList(); 
     renderOrderInvoice(name);
 }
 
@@ -443,24 +677,39 @@ function renderOrderInvoice(name) {
     const today = new Date().toLocaleDateString('zh-TW');
     const grandTotal = items.reduce((sum, item) => sum + item.total, 0);
 
-    let itemsHtml = items.map(item => `
-        <div class="invoice-item">
-            <div class="invoice-item-name">${item.itemName} (x${item.qty})</div>
-            <div class="invoice-row"><span>台幣換算基準 (${item.price} ${item.currency})</span><span>NT$ ${Math.round(item.base).toLocaleString()}</span></div>
-            ${item.cc > 0 ? `<div class="invoice-row plus"><span>刷卡手續費</span><span>+ NT$ ${item.cc.toLocaleString()}</span></div>` : ''}
-            ${item.gov > 0 ? `<div class="invoice-row minus"><span>退稅折抵</span><span>- NT$ ${item.gov.toLocaleString()}</span></div>` : ''}
+    let itemsHtml = items.map((item, index) => {
+        // 相容舊資料可能沒有 paymentFee 的問題
+        const fee = item.paymentFee !== undefined ? item.paymentFee : (item.cc || 0);
+        const feeLabel = item.paymentFeeLabel || '刷卡手續費';
+        const taxRateDisplay = item.taxRate !== undefined ? item.taxRate : '0';
+
+        return `
+        <div class="invoice-item" style="padding: 16px; position: relative;">
+            <div style="position: absolute; top: 12px; right: 12px; display: flex; gap: 8px;">
+                <button onclick="openEditItem('${name}', ${index})" class="btn-sm btn-outline" style="padding: 4px 8px; font-size: 0.8rem; background: #fff;">編輯</button>
+                <button onclick="deleteOrderItem('${name}', ${index})" class="btn-sm btn-danger" style="padding: 4px 8px; font-size: 0.8rem; background: #fff;">刪除</button>
+            </div>
+            <div class="invoice-item-name" style="font-size: 1.1rem; border-bottom: none; padding-bottom: 0; margin-bottom: 12px; padding-right: 90px;">商品名稱：${item.itemName} (x${item.qty})</div>
+            
+            <div style="border: 2px solid #94a3b8; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fff;">
+                <div class="invoice-row"><span>當地金額</span><span style="font-weight:bold; color:#111;">${item.price.toLocaleString()} ${item.currency}</span></div>
+                <div class="invoice-row"><span>台幣換算金額</span><span style="font-weight:bold; color:#111;">NT$ ${Math.round(item.base).toLocaleString()}</span></div>
+                <div class="invoice-row" style="margin-bottom:0;"><span>換算匯率</span><span style="font-weight:bold; color:#111;">${item.rate.toFixed(5)}</span></div>
+            </div>
+
+            ${fee > 0 ? `<div class="invoice-row plus"><span>${feeLabel}</span><span>+ NT$ ${fee.toLocaleString()}</span></div>` : ''}
+            ${item.gov > 0 ? `<div class="invoice-row minus"><span>退稅 ${taxRateDisplay}%</span><span>- NT$ ${item.gov.toLocaleString()}</span></div>` : ''}
             ${item.store > 0 ? `<div class="invoice-row minus"><span>店家折扣</span><span>- NT$ ${item.store.toLocaleString()}</span></div>` : ''}
             ${item.svc > 0 ? `<div class="invoice-row plus"><span>代購服務費</span><span>+ NT$ ${item.svc.toLocaleString()}</span></div>` : ''}
             ${item.ship > 0 ? `<div class="invoice-row plus"><span>運費</span><span>+ NT$ ${item.ship.toLocaleString()}</span></div>` : ''}
-            <div class="invoice-row" style="margin-top: 8px; font-weight: 700; color: #111;">
-                <span>品項小計</span><span>NT$ ${item.total.toLocaleString()}</span>
-            </div>
+            <div style="text-align:right; font-weight:800; font-size:1.2rem; color:#111; margin-top:12px; border-top: 2px dashed #e5e7eb; padding-top: 12px;">商品小計: NT$ ${item.total.toLocaleString()}</div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
     document.getElementById('orderCard').innerHTML = `
         <div class="invoice-header">
-            <h2 class="invoice-title">代購專屬對帳單</h2>
+            <h2 class="invoice-title">代購明細一覽</h2>
             <div class="invoice-date">建立日期：${today}</div>
         </div>
         <div class="invoice-customer">致：${name}</div>
@@ -482,16 +731,95 @@ function renderOrderInvoice(name) {
     document.getElementById('btnClear').style.display = 'inline-block';
 }
 
+// --- 編輯與刪除邏輯 ---
+function deleteOrderItem(name, index) {
+    customConfirm(`確定要刪除「${orders[name][index].itemName}」這筆明細嗎？`, () => {
+        orders[name].splice(index, 1);
+        if (orders[name].length === 0) {
+            delete orders[name];
+            currentSelectedCustomer = null;
+            document.getElementById('orderCard').innerHTML = '<div class="empty-state">請先從左側選擇一位客戶</div>';
+            document.getElementById('orderActionButtons').style.display = 'none';
+            document.getElementById('btnClear').style.display = 'none';
+        }
+        saveOrders();
+        renderCustomerList();
+        if (currentSelectedCustomer) renderOrderInvoice(currentSelectedCustomer);
+        showToast('🗑️ 已刪除明細');
+    });
+}
+
+let editContext = { name: null, index: null };
+function openEditItem(name, index) {
+    editContext = { name, index };
+    const item = orders[name][index];
+    document.getElementById('editItemName').value = item.itemName;
+    document.getElementById('editItemPrice').value = item.price;
+    document.getElementById('editItemQty').value = item.qty;
+    document.getElementById('editItemSvc').value = item.svc;
+    document.getElementById('editItemShip').value = item.ship;
+    document.getElementById('editModal').classList.add('show');
+}
+
+function saveEditItem() {
+    const { name, index } = editContext;
+    if(!name || index === null) return;
+    
+    const item = orders[name][index];
+    item.itemName = document.getElementById('editItemName').value.trim() || '未命名商品';
+    item.price = +document.getElementById('editItemPrice').value || 0;
+    item.qty = +document.getElementById('editItemQty').value || 1;
+    item.svc = +document.getElementById('editItemSvc').value || 0;
+    item.ship = +document.getElementById('editItemShip').value || 0;
+
+    // 重新計算 (支援舊資料的回溯相容)
+    const taxType = item.taxType || 'none';
+    const taxRate = item.taxRate || 0;
+    const storeDiscRate = item.storeDiscRate || 0;
+    const payModeValue = item.payModeValue || 'cash';
+    const mobileFeeRateValue = item.mobileFeeRateValue || 0;
+
+    item.base = item.price * item.qty * item.rate;
+    
+    if (taxType === 'posttax') {
+        item.gov = Math.round(item.base * (taxRate / (100 + taxRate)));
+    } else if (taxType === 'custom') {
+        item.gov = Math.round(item.base * (taxRate / 100));
+    } else {
+        item.gov = 0; 
+    }
+
+    item.store = Math.round(item.base * (storeDiscRate / 100));
+
+    if (payModeValue === 'card') {
+        item.paymentFee = Math.round(item.base * 0.015);
+    } else if (payModeValue === 'mobile') {
+        item.paymentFee = Math.round(item.base * (mobileFeeRateValue / 100));
+    } else {
+        item.paymentFee = 0;
+    }
+
+    item.total = Math.round(item.base - item.gov - item.store + item.paymentFee + item.svc + item.ship);
+
+    saveOrders();
+    renderCustomerList();
+    renderOrderInvoice(name);
+    closeModal('editModal');
+    showToast('✅ 明細已更新');
+}
+
 function clearCurrentCustomer() {
-    if(confirm(`確定要清除 ${currentSelectedCustomer} 的所有訂單紀錄嗎？`)) {
+    customConfirm(`確定要清除 ${currentSelectedCustomer} 的所有訂單紀錄嗎？`, () => {
         delete orders[currentSelectedCustomer];
         saveOrders();
+
         currentSelectedCustomer = null;
         renderCustomerList();
         document.getElementById('orderCard').innerHTML = '<div class="empty-state">請先從左側選擇一位客戶</div>';
         document.getElementById('orderActionButtons').style.display = 'none';
         document.getElementById('btnClear').style.display = 'none';
-    }
+        showToast('🗑️ 訂單已清除');
+    });
 }
 
 // --- 匯出功能 ---
@@ -502,11 +830,23 @@ async function copyTextOrder(){
     const items = orders[currentSelectedCustomer];
     const grandTotal = items.reduce((sum, item) => sum + item.total, 0);
     
-    let text = `【代購專屬對帳單】\n購買人：${currentSelectedCustomer}\n================\n`;
+    let text = `【代購明細一覽】\n購買人：${currentSelectedCustomer}\n================\n`;
     
     items.forEach(item => {
-        text += `▪ ${item.itemName} (x${item.qty})\n`;
-        text += `  小計：NT$ ${item.total.toLocaleString()}\n`;
+        const fee = item.paymentFee !== undefined ? item.paymentFee : (item.cc || 0);
+        const feeLabel = item.paymentFeeLabel || '刷卡手續費';
+        const taxRateDisplay = item.taxRate !== undefined ? item.taxRate : '0';
+
+        text += `▪ 商品名稱：${item.itemName} (x${item.qty})\n`;
+        text += `  當地金額：${item.price.toLocaleString()} ${item.currency}\n`;
+        text += `  台幣換算金額：NT$ ${Math.round(item.base).toLocaleString()}\n`;
+        text += `  換算匯率：${item.rate.toFixed(5)}\n`;
+        if (fee > 0) text += `  ${feeLabel}：+NT$ ${fee.toLocaleString()}\n`;
+        if (item.gov > 0) text += `  退稅 ${taxRateDisplay}%：-NT$ ${item.gov.toLocaleString()}\n`;
+        if (item.store > 0) text += `  店家折扣：-NT$ ${item.store.toLocaleString()}\n`;
+        if (item.svc > 0) text += `  代購服務費：+NT$ ${item.svc.toLocaleString()}\n`;
+        if (item.ship > 0) text += `  運費：+NT$ ${item.ship.toLocaleString()}\n`;
+        text += `  商品小計：NT$ ${item.total.toLocaleString()}\n\n`;
     });
     
     text += `================\n應付總計：NT$ ${grandTotal.toLocaleString()}\n`;
@@ -534,7 +874,7 @@ async function copyImageOrder(){
             showToast('📸 對帳圖片已複製！請至聊天室貼上');
         });
     } catch(e) {
-        alert('複製圖片失敗，您的瀏覽器可能不支援此功能，請嘗試截圖。');
+        customAlert('複製圖片失敗，您的瀏覽器可能不支援此功能，請嘗試截圖。');
         console.error(e);
     } finally {
         btn.innerText = originalText;
