@@ -293,10 +293,22 @@ button.btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto;}
                 <input id="editItemQty" type="number" min="1">
             </div>
             <div>
+                <label>退稅率 (%)</label>
+                <input id="editTaxRate" type="number" step="0.1" min="0">
+            </div>
+            <div>
+                <label>店家折扣 (%)</label>
+                <input id="editStoreDiscRate" type="number" step="0.1" min="0">
+            </div>
+            <div>
+                <label>手續費率 (%)</label>
+                <input id="editFeeRate" type="number" step="0.1" min="0">
+            </div>
+            <div>
                 <label>代購服務費</label>
                 <input id="editItemSvc" type="number">
             </div>
-            <div>
+            <div style="grid-column: span 2;">
                 <label>運費</label>
                 <input id="editItemShip" type="number">
             </div>
@@ -753,9 +765,21 @@ let editContext = { name: null, index: null };
 function openEditItem(name, index) {
     editContext = { name, index };
     const item = orders[name][index];
+    
+    // 為了支援舊資料並修正資料遺失問題，若找不到 % 數設定，自動從金額反推算率
+    let derivedTaxRate = item.taxRate || 0;
+    let derivedStoreDiscRate = item.storeDiscRate !== undefined ? item.storeDiscRate : (item.base && item.store ? (item.store / item.base) * 100 : 0);
+    let derivedFeeRate = 0;
+    if (item.payModeValue === 'card') derivedFeeRate = 1.5;
+    else if (item.payModeValue === 'mobile') derivedFeeRate = item.mobileFeeRateValue || 0;
+    else if (item.paymentFee > 0 && item.base) derivedFeeRate = (item.paymentFee / item.base) * 100;
+    
     document.getElementById('editItemName').value = item.itemName;
     document.getElementById('editItemPrice').value = item.price;
     document.getElementById('editItemQty').value = item.qty;
+    document.getElementById('editTaxRate').value = derivedTaxRate.toFixed(2).replace(/\.00$/, '');
+    document.getElementById('editStoreDiscRate').value = derivedStoreDiscRate.toFixed(2).replace(/\.00$/, '');
+    document.getElementById('editFeeRate').value = derivedFeeRate.toFixed(2).replace(/\.00$/, '');
     document.getElementById('editItemSvc').value = item.svc;
     document.getElementById('editItemShip').value = item.ship;
     document.getElementById('editModal').classList.add('show');
@@ -769,21 +793,33 @@ function saveEditItem() {
     item.itemName = document.getElementById('editItemName').value.trim() || '未命名商品';
     item.price = +document.getElementById('editItemPrice').value || 0;
     item.qty = +document.getElementById('editItemQty').value || 1;
+    
+    // 取得使用者編輯的率
+    const taxRate = +document.getElementById('editTaxRate').value || 0;
+    const storeDiscRate = +document.getElementById('editStoreDiscRate').value || 0;
+    const feeRate = +document.getElementById('editFeeRate').value || 0;
+    
     item.svc = +document.getElementById('editItemSvc').value || 0;
     item.ship = +document.getElementById('editItemShip').value || 0;
 
-    // 重新計算 (支援舊資料的回溯相容)
-    const taxType = item.taxType || 'none';
-    const taxRate = item.taxRate || 0;
-    const storeDiscRate = item.storeDiscRate || 0;
-    const payModeValue = item.payModeValue || 'cash';
-    const mobileFeeRateValue = item.mobileFeeRateValue || 0;
-
+    // 重新計算基礎金額
     item.base = item.price * item.qty * item.rate;
     
-    if (taxType === 'posttax') {
+    // 更新狀態
+    item.taxRate = taxRate;
+    item.storeDiscRate = storeDiscRate;
+    
+    // 判斷退稅處理
+    if (taxRate > 0 && (!item.taxType || item.taxType === 'none' || item.taxType === 'pretax')) {
+        // 如果原本沒退稅，但編輯時加上了退稅率，自動轉為 custom 扣抵
+        item.taxType = 'custom';
+    } else if (taxRate === 0) {
+        item.taxType = 'none';
+    }
+    
+    if (item.taxType === 'posttax') {
         item.gov = Math.round(item.base * (taxRate / (100 + taxRate)));
-    } else if (taxType === 'custom') {
+    } else if (item.taxType === 'custom') {
         item.gov = Math.round(item.base * (taxRate / 100));
     } else {
         item.gov = 0; 
@@ -791,12 +827,16 @@ function saveEditItem() {
 
     item.store = Math.round(item.base * (storeDiscRate / 100));
 
-    if (payModeValue === 'card') {
-        item.paymentFee = Math.round(item.base * 0.015);
-    } else if (payModeValue === 'mobile') {
-        item.paymentFee = Math.round(item.base * (mobileFeeRateValue / 100));
+    // 更新手續費
+    item.paymentFee = Math.round(item.base * (feeRate / 100));
+    if (feeRate > 0) {
+        item.payModeValue = feeRate === 1.5 ? 'card' : 'mobile';
+        item.mobileFeeRateValue = feeRate;
+        item.paymentFeeLabel = feeRate === 1.5 ? '刷卡手續費 (1.5%)' : `手續費 (${feeRate}%)`;
     } else {
-        item.paymentFee = 0;
+        item.payModeValue = 'cash';
+        item.mobileFeeRateValue = 0;
+        item.paymentFeeLabel = '';
     }
 
     item.total = Math.round(item.base - item.gov - item.store + item.paymentFee + item.svc + item.ship);
